@@ -1,0 +1,15 @@
+[package]
+name = "evdmeshlib"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "evdmeshlib"
+crate-type = ["cdylib"]
+
+[dependencies]
+rand = "0.8.5"
+
+[dependencies.pyo3]
+version = "0.20.0"
+features = ["abi3-py311"]
