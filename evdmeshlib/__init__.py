@@ -1,1 +1,5 @@
-from ._rs import linalg
+from evdmeshlib import linalg
+
+__all__ = [
+    "linalg",
+]
