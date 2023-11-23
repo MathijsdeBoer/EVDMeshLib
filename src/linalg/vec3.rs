@@ -100,11 +100,7 @@ impl Vec3 {
         let rho = vec.rho();
         let phi = vec.phi();
         let z = vec.z;
-        Vec3 {
-            x: rho,
-            y: phi,
-            z,
-        }
+        Vec3 { x: rho, y: phi, z }
     }
 
     #[staticmethod]
