@@ -1,4 +1,4 @@
-from evdmeshlib._rs.linalg import Vec3
+from evdmeshlib.rs.linalg import Vec3
 
 
 def test_vec3():
