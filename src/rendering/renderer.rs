@@ -1,12 +1,12 @@
 use pyo3::prelude::*;
 
 use crate::rendering::Intersection;
-use crate::rendering::projector::Projector;
+use crate::rendering::cameras::projector::Projector;
 use crate::rendering::scene::Scene;
 
 #[pyclass]
 struct Renderer {
-    projector: dyn Projector,
+    projector: BaseCamera,
     scene: Scene,
     
     x_resolution: usize,
@@ -16,7 +16,9 @@ struct Renderer {
     pub image: Vec<Vec<Option<Intersection>>>,
 }
 
+#[pymethods]
 impl Renderer {
+    #[new]
     pub fn new(
         projector: impl Projector + 'static,
         scene: Scene,

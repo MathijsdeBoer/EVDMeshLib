@@ -1,16 +1,29 @@
-use crate::linalg::Vec3;
-use crate::rendering::projector::Projector;
+use pyo3::prelude::*;
 
-struct ProjectionCamera {
-    position: Vec3,
-    forward: Vec3,
-    up: Vec3,
-    right: Vec3,
-    fov: f64,
-    aspect_ratio: f64
+use crate::linalg::Vec3;
+use crate::rendering::cameras::BaseCamera;
+use crate::rendering::cameras::projector::Projector;
+use crate::rendering::Ray;
+
+#[pyclass(name = "ProjectionCamera", extends = BaseCamera)]
+pub struct PerspectiveCamera {
+    #[pyo3(get, set)]
+    pub position: Vec3,
+    #[pyo3(get, set)]
+    pub forward: Vec3,
+    #[pyo3(get, set)]
+    pub up: Vec3,
+    #[pyo3(get, set)]
+    pub right: Vec3,
+    #[pyo3(get, set)]
+    pub fov: f64,
+    #[pyo3(get, set)]
+    pub aspect_ratio: f64
 }
 
-impl ProjectionCamera {
+#[pymethods]
+impl PerspectiveCamera {
+    #[new]
     pub fn new(position: Vec3, forward: Vec3, up: Vec3, fov: f64, aspect_ratio: f64) -> Self {
         let right = forward.cross(&up).normalize();
         let up = right.cross(forward).normalize();
@@ -24,10 +37,8 @@ impl ProjectionCamera {
             aspect_ratio
         }
     }
-}
 
-impl Projector for ProjectionCamera {
-    fn project_to_2d(&self, x: f64, y: f64) -> Ray {
+    pub fn ray_from_screenspace(&self, x: f64, y: f64) -> Ray {
         let x = (x - 0.5) * self.aspect_ratio * self.fov;
         let y = (y - 0.5) * self.fov;
 
@@ -35,10 +46,20 @@ impl Projector for ProjectionCamera {
         Ray::new(self.position, direction.normalize())
     }
 
-    fn project_from_world(&self, position: Vec3) -> (f64, f64) {
+    fn position_to_screenspace(&self, position: Vec3) -> (f64, f64) {
         let direction = position - self.position;
-        let x = direction.dot(&self.right) / self.fov / self.aspect_ratio + 0.5;
-        let y = direction.dot(&self.up) / self.fov + 0.5;
+        let x = direction.dot(&self.right) / self.aspect_ratio;
+        let y = direction.dot(&self.up);
         (x, y)
+    }
+}
+
+impl Projector for PerspectiveCamera {
+    fn ray_from_screenspace(&self, x: f64, y: f64) -> Ray {
+        PerspectiveCamera::ray_from_screenspace(self, x, y)
+    }
+
+    fn position_to_screenspace(&self, position: Vec3) -> (f64, f64) {
+        PerspectiveCamera::position_to_screenspace(self, position)
     }
 }
