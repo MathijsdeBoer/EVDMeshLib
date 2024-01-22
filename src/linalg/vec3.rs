@@ -64,13 +64,10 @@ impl Vec3 {
 
     #[staticmethod]
     pub fn spherical_to_cartesian(vec: Self) -> Self {
-        let rho = vec.rho();
-        let phi = vec.phi();
-        let theta = vec.theta();
-        Vec3 {
-            x: rho * phi.sin() * theta.cos(),
-            y: rho * phi.sin() * theta.sin(),
-            z: rho * phi.cos(),
+        Self {
+            x: vec.x * vec.y.cos() * vec.z.sin(),
+            y: vec.x * vec.y.sin() * vec.z.sin(),
+            z: vec.x * vec.z.cos(),
         }
     }
 

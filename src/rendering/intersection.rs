@@ -3,6 +3,14 @@ use pyo3::prelude::*;
 use crate::linalg::Vec3;
 
 #[pyclass]
+#[derive(Clone, Copy)]
+pub enum IntersectionSort {
+    Nearest,
+    Farthest,
+}
+
+#[pyclass]
+#[derive(Clone, Copy)]
 pub struct Intersection {
     #[pyo3(get)]
     pub distance: f64,

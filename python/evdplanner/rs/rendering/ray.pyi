@@ -1,0 +1,7 @@
+from evdplanner.rs import Vec3
+
+class Ray:
+    origin: Vec3
+    direction: Vec3
+    def __init__(self, origin: Vec3, direction: Vec3) -> None: ...
+    def at(self, t: float) -> Vec3: ...

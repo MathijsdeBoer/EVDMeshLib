@@ -1,5 +1,24 @@
-mod aabb;
-mod intersectable;
+mod mesh;
 
-pub use aabb::Aabb;
-pub use intersectable::{Intersectable, IntersectableObject};
+pub use mesh::Mesh;
+
+use pyo3::prelude::*;
+
+#[pymodule]
+fn geometry(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Mesh>()?;
+    Ok(())
+}
+
+pub fn init_geometry(_py: Python, m: &PyModule) -> PyResult<()> {
+    let geometry_child_module = PyModule::new(_py, "evdplanner.rs.geometry")?;
+    geometry(_py, geometry_child_module)?;
+
+    m.add("geometry", geometry_child_module)?;
+
+    _py.import("sys")?
+        .getattr("modules")?
+        .set_item("evdplanner.rs.geometry", geometry_child_module)?;
+
+    Ok(())
+}

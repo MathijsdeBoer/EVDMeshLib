@@ -11,14 +11,14 @@ fn linalg(_py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 pub fn init_linalg(_py: Python, m: &PyModule) -> PyResult<()> {
-    let linalg_child_module = PyModule::new(_py, "evdmeshlib.rs.linalg")?;
+    let linalg_child_module = PyModule::new(_py, "evdplanner.rs.linalg")?;
     linalg(_py, linalg_child_module)?;
 
     m.add("linalg", linalg_child_module)?;
 
     _py.import("sys")?
         .getattr("modules")?
-        .set_item("evdmeshlib.rs.linalg", linalg_child_module)?;
+        .set_item("evdplanner.rs.linalg", linalg_child_module)?;
 
     Ok(())
 }
