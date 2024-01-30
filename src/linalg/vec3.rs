@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use pyo3::prelude::*;
 
@@ -63,11 +63,11 @@ impl Vec3 {
     }
 
     #[staticmethod]
-    pub fn spherical_to_cartesian(vec: Self) -> Self {
+    pub fn spherical_to_cartesian(v: &Self) -> Self {
         Self {
-            x: vec.x * vec.y.cos() * vec.z.sin(),
-            y: vec.x * vec.y.sin() * vec.z.sin(),
-            z: vec.x * vec.z.cos(),
+            x: v.x * v.y.cos() * v.z.sin(),
+            y: v.x * v.y.sin() * v.z.sin(),
+            z: v.x * v.z.cos(),
         }
     }
 
@@ -220,7 +220,7 @@ impl Vec3 {
     }
 
     pub fn __str__(&self) -> String {
-        format!("Vec3({}, {}, {})", self.x, self.y, self.z)
+        format!("({}, {}, {})", self.x, self.y, self.z)
     }
 
     pub fn __repr__(&self) -> String {
@@ -231,6 +231,10 @@ impl Vec3 {
 impl Vec3 {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
+    }
+
+    pub fn as_f32_array(&self) -> [f32; 3] {
+        [self.x as f32, self.y as f32, self.z as f32]
     }
 }
 
@@ -362,6 +366,19 @@ impl PartialEq for Vec3 {
 }
 
 impl Eq for Vec3 {}
+
+impl Index<usize> for Vec3 {
+    type Output = f64;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Index out of bounds"),
+        }
+    }
+}
 
 impl Debug for Vec3 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

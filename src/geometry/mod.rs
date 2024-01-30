@@ -1,12 +1,20 @@
+mod aabb;
+mod bvh;
 mod mesh;
 
-pub use mesh::Mesh;
+pub use aabb::Aabb;
+pub use bvh::{Bvh, BvhNode};
+pub use mesh::{Mesh, Triangle};
 
 use pyo3::prelude::*;
 
 #[pymodule]
 fn geometry(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Mesh>()?;
+    m.add_class::<Triangle>()?;
+    m.add_class::<Aabb>()?;
+    m.add_class::<Bvh>()?;
+    m.add_class::<BvhNode>()?;
     Ok(())
 }
 

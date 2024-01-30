@@ -20,4 +20,12 @@ impl Ray {
     pub fn at(&self, t: f64) -> Vec3 {
         self.origin + t * self.direction
     }
+
+    pub fn __repr__(&self) -> String {
+        format!("Ray(origin={}, direction={})", self.origin, self.direction)
+    }
+
+    pub fn __str__(&self) -> String {
+        format!("Ray(origin={}, direction={})", self.origin, self.direction)
+    }
 }

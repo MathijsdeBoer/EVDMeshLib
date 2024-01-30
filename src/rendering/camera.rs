@@ -22,7 +22,7 @@ pub struct Camera {
     pub right: Vec3,
     #[pyo3(get, set)]
     pub up: Vec3,
-    
+
     #[pyo3(get, set)]
     pub x_resolution: usize,
     #[pyo3(get, set)]
@@ -117,32 +117,22 @@ impl Camera {
     }
 
     pub fn cast_ray(&self, x: usize, y: usize) -> Ray {
-        let x = x as f64 / self.x_resolution as f64;
-        let y = y as f64 / self.y_resolution as f64;
-        
         match self.camera_type {
             CameraType::Perspective => {
-                let x = (x - 0.5) * self.aspect_ratio * self.fov.tan();
-                let y = (y - 0.5) * self.fov.tan();
-                let direction = self.forward + self.right * x + self.up * y;
-
-                Ray::new(self.origin, direction.unit_vector())
+                todo!("Perspective camera not yet implemented")
             }
             CameraType::Orthographic => {
-                let x = (x - 0.5) * self.size * self.aspect_ratio;
-                let y = (y - 0.5) * self.size;
-                let origin = self.origin + self.right * x + self.up * y;
-
-                Ray::new(origin, self.forward.unit_vector())
+                todo!("Orthographic camera not yet implemented")
             }
             CameraType::Equirectangular => {
                 // Spherical sampling adapted from
                 // https://www.pbr-book.org/3ed-2018/Camera_Models/Environment_Camera
-                let phi: f64 = PI * y;
-                let theta: f64 = 2.0 * PI * x + self.theta_offset;
+                let phi: f64 = PI * (y as f64 / self.y_resolution as f64);
+                let theta: f64 =
+                    2.0 * PI * (x as f64 / self.x_resolution as f64) + self.theta_offset;
 
-                let direction = Vec3::spherical_to_cartesian(Vec3::new(1.0, theta, phi));
-                Ray::new(self.origin, direction.unit_vector())
+                let direction = Vec3::spherical_to_cartesian(&Vec3::new(1.0, theta, phi));
+                Ray::new(self.origin, direction)
             }
         }
     }
