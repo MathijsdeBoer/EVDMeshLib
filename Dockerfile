@@ -14,7 +14,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && curl https://sh.rustup.rs -sSf | sh -s -- -y \
-    && python -m pip install -U pip \
+    && python -m pip install -U pip
 
 COPY . /code
 RUN pip install /code
