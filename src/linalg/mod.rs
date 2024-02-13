@@ -1,5 +1,7 @@
+mod mat4;
 mod vec3;
 
+pub use mat4::Mat4;
 pub use vec3::Vec3;
 
 use pyo3::prelude::*;
@@ -7,6 +9,7 @@ use pyo3::prelude::*;
 #[pymodule]
 fn linalg(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Vec3>()?;
+    m.add_class::<Mat4>()?;
     Ok(())
 }
 

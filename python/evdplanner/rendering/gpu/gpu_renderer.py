@@ -23,10 +23,10 @@ class GPURenderer(CPURenderer):
         self.y_resolution = self.camera.y_resolution
 
     def render(self, intersection_mode: IntersectionSort, epsilon: float = 1e-8) -> np.ndarray:
-        ti.init(arch=ti.gpu, default_fp=ti.f64, kernel_profiler=True)
+        ti.init(arch=ti.gpu, default_fp=ti.f64, kernel_profiler=True, enable_fallback=False)
         pixels = ti.Vector.field(4, dtype=ti.f64, shape=(self.y_resolution, self.x_resolution))
         pixels.fill(-1.0)
-        
+
         ray_directions = ti.Vector.field(
             3, dtype=ti.f64, shape=(self.y_resolution, self.x_resolution)
         )

@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 use crate::linalg::Vec3;
 
 #[pyclass]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Ray {
     #[pyo3(get)]
     pub origin: Vec3,

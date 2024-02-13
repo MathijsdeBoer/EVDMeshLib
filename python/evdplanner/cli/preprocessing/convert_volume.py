@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-import numpy as np
 
 
 @click.command(name="convert-volume")
@@ -20,13 +19,23 @@ def convert_volume(
     output: Path,
 ):
     """Convert volume to stl."""
+    import numpy as np
     import SimpleITK as sitk
     from evdplanner.geometry.conversion import volume_to_mesh
 
+    print(f"Converting {volume} to {output}...")
+    print("Reading volume...")
     volume = sitk.ReadImage(volume)
+    origin = volume.GetOrigin()
     spacing = volume.GetSpacing()
+    volume = sitk.DICOMOrient(volume, "LPS")
     volume = sitk.GetArrayFromImage(volume)
 
-    mesh = volume_to_mesh(np.swapaxes(volume, 0, -1), spacing)
-    mesh.laplacian_smooth(iterations=16, smoothing_factor=0.1)
+    print("Converting volume to mesh...")
+    mesh = volume_to_mesh(np.swapaxes(volume, 0, -1), origin, spacing, num_samples=1_000_000)
+
+    print("Smoothing mesh...")
+    mesh.laplacian_smooth(iterations=10, smoothing_factor=0.25)
+
+    print("Saving mesh...")
     mesh.save(str(output))

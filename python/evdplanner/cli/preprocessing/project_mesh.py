@@ -1,31 +1,16 @@
+import json
 from math import pi
 from pathlib import Path
 from time import time
 
 import click
 import numpy as np
-from imageio import imwrite
 
+from evdplanner.markups.markup import MarkupTypes
+from evdplanner.markups.markup_manager import MarkupManager
 from evdplanner.rendering.utils import normalize_image
-from evdplanner.rs import Mesh, Camera, Vec3, CameraType, IntersectionSort
-
-
-class _ProjectionSession:
-    def __init(
-            self,
-            mesh_name: str,
-            mesh: Mesh,
-            output: Path,
-            resolution: int,
-            gpu: bool,
-            verbose: bool,
-    ):
-        self.mesh_name = mesh_name
-        self.mesh = mesh
-        self.output = output
-        self.resolution = resolution
-        self.gpu = gpu
-        self.verbose = verbose
+from evdplanner.rs import Camera, CameraType, IntersectionSort, Mesh, Vec3
+from imageio import imwrite
 
 
 @click.group(name="project")
@@ -37,7 +22,12 @@ class _ProjectionSession:
 @click.argument(
     "output",
     type=click.Path(
-        exists=False, file_okay=False, dir_okay=True, writable=True, resolve_path=True, path_type=Path
+        exists=False,
+        file_okay=False,
+        dir_okay=True,
+        writable=True,
+        resolve_path=True,
+        path_type=Path,
     ),
 )
 @click.option(
@@ -62,48 +52,73 @@ class _ProjectionSession:
     show_default=True,
     help="Print progress.",
 )
+@click.option(
+    "-k",
+    "--keypoints",
+    "keypoints_file",
+    type=click.Path(
+        exists=True, dir_okay=False, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    default=None,
+    show_default=True,
+    help="Name of the keypoints file.",
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Strict mode.",
+)
 def project_mesh(
-        ctx: click.Context,
-        mesh: Path,
-        output: Path,
-        resolution: int,
-        gpu: bool,
-        verbose: bool,
+    ctx: click.Context,
+    mesh: Path,
+    output: Path,
+    resolution: int,
+    gpu: bool,
+    verbose: bool,
+    keypoints_file: Path = None,
+    strict: bool = False,
 ):
     if ctx.obj is None:
         ctx.obj = {}
 
-    ctx.obj["mesh_name"] = mesh.stem.split("_")[-1]
+    ctx.obj["mesh_name"] = mesh.stem.split("_")[1]
     ctx.obj["mesh"] = Mesh.load(str(mesh), 10_000_000)
     ctx.obj["output"] = output
     ctx.obj["resolution"] = resolution
     ctx.obj["gpu"] = gpu
     ctx.obj["verbose"] = verbose
+    ctx.obj["keypoints_file"] = keypoints_file
+    ctx.obj["strict"] = strict
 
 
 @project_mesh.command(name="equirectangular")
 @click.pass_context
 @click.option("--theta-offset", type=float, default=0.5 * pi, show_default=True)
 def equirectangular(
-        ctx: click.Context,
-        theta_offset: float = 0.5 * pi,
+    ctx: click.Context,
+    theta_offset: float = 0.5 * pi,
 ):
     """Project mesh to equirectangular map."""
     if ctx.obj["verbose"]:
-        print(f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces")
+        print(
+            f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces"
+        )
         print(f"Mesh origin: {ctx.obj['mesh'].origin}")
         print(f"Theta offset: {theta_offset}")
         print(f"Output resolution: {ctx.obj['resolution']}x{ctx.obj['resolution'] // 2}")
         print("Initializing camera...")
 
     camera = Camera(
-        ctx.obj["mesh"].origin,
+        # ctx.obj["mesh"].origin,
+        Vec3(0, 0, 0),
         forward=Vec3(0, -1, 0),
         up=Vec3(0, 0, 1),
         x_resolution=ctx.obj["resolution"],
         y_resolution=ctx.obj["resolution"] // 2,
         camera_type=CameraType.Equirectangular,
-        theta_offset=theta_offset,
     )
 
     if ctx.obj["gpu"]:
@@ -158,3 +173,46 @@ def equirectangular(
     if ctx.obj["verbose"]:
         print(f"Saved to {depth_output}")
         print(f"Saved to {normal_output}")
+
+    if ctx.obj["keypoints_file"]:
+        if not ctx.obj["keypoints_file"].exists():
+            if ctx.obj["strict"]:
+                raise FileNotFoundError(f"File {ctx.obj['keypoints_file']} does not exist.")
+            else:
+                print(f"Warning: File {ctx.obj['keypoints_file']} does not exist.")
+                return
+
+        projected_keypoints: list[dict[str, tuple[float, float]]] = []
+
+        if ctx.obj["verbose"]:
+            print("Projecting keypoints...")
+
+        markups = MarkupManager.from_file(ctx.obj["keypoints_file"])
+
+        for markup in markups.markups:
+            if markup.markup_type == MarkupTypes.FIDUCIAL:
+                for point in markup.control_points:
+                    if len(point.position) == 0:
+                        if not ctx.obj["strict"]:
+                            print(f"Warning: Empty position for {point.label}")
+                            continue
+                        else:
+                            raise ValueError(f"Empty position for {point.label}")
+
+                    control_point = Vec3(*point.position[:3])
+                    x, y = camera.project_back(control_point, normalized=True)
+
+                    print(f"Projected {point.label:<8}:\t{str(control_point):<64} -> ({x=}, {y=})")
+
+                    projected_keypoints.append(
+                        {
+                            "label": point.label,
+                            "position": (x, y),
+                        }
+                    )
+
+        if ctx.obj["verbose"]:
+            print("Saving keypoints...")
+
+        with open(ctx.obj["output"] / f"projected_{ctx.obj['mesh_name']}.kp.json", "w") as f:
+            json.dump(projected_keypoints, f, indent=4)

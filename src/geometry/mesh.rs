@@ -374,18 +374,18 @@ impl Mesh {
     pub fn laplacian_smooth(&mut self, iterations: usize, smoothing_factor: f64) {
         let mut vertex_neighbours: Vec<Vec<usize>> = vec![Vec::new(); self.vertices.len()];
 
+        for triangle in self.triangles.iter() {
+            vertex_neighbours[triangle.a].push(triangle.b);
+            vertex_neighbours[triangle.a].push(triangle.c);
+
+            vertex_neighbours[triangle.b].push(triangle.a);
+            vertex_neighbours[triangle.b].push(triangle.c);
+
+            vertex_neighbours[triangle.c].push(triangle.a);
+            vertex_neighbours[triangle.c].push(triangle.b);
+        }
+
         for _ in 0..iterations {
-            for triangle in self.triangles.iter() {
-                vertex_neighbours[triangle.a].push(triangle.b);
-                vertex_neighbours[triangle.a].push(triangle.c);
-
-                vertex_neighbours[triangle.b].push(triangle.a);
-                vertex_neighbours[triangle.b].push(triangle.c);
-
-                vertex_neighbours[triangle.c].push(triangle.a);
-                vertex_neighbours[triangle.c].push(triangle.b);
-            }
-
             let neighbour_means: Vec<Vec3> = vertex_neighbours
                 .par_iter()
                 .map(|neighbours| {

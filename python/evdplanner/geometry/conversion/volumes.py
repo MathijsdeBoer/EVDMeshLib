@@ -6,10 +6,16 @@ from evdplanner.linalg import Vec3
 
 def volume_to_mesh(
     volume: np.ndarray,
-    spacing: tuple[float, float, float] = (1.0, 1.0, 1.0),
+    origin: Vec3 | tuple[float, float, float] = Vec3.zero(),
+    spacing: Vec3 | tuple[float, float, float] = Vec3.one(),
     num_samples: int = 1_000_000,
 ) -> Mesh:
     """Convert a volume to a mesh."""
+    if isinstance(origin, tuple):
+        origin = Vec3(*origin)
+    if isinstance(spacing, tuple):
+        spacing = Vec3(*spacing)
+
     # Pad the volume with zeros to avoid edge effects
     volume = np.pad(volume, 1, mode="constant")
 
@@ -22,7 +28,8 @@ def volume_to_mesh(
             vertex[1] * spacing[1],
             vertex[2] * spacing[2],
         )
-        - Vec3(*spacing)
+        - spacing
+        + origin
         for vertex in vertices
     ]
     faces = [tuple(triangle) for triangle in triangles]

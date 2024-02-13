@@ -3,7 +3,10 @@ use std::fmt::{Debug, Display, Formatter};
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use crate::linalg::Mat4;
 use pyo3::prelude::*;
+
+const TWO_PI: f64 = 2.0 * PI;
 
 #[pyclass]
 #[derive(Clone, Copy)]
@@ -51,8 +54,14 @@ impl Vec3 {
         let mut theta = v.y.atan2(v.x);
         let phi = (v.z / rho).acos();
 
-        if wrap_around && theta < 0.0 {
-            theta += 2.0 * PI;
+        if wrap_around {
+            while !(0.0..=TWO_PI).contains(&theta) {
+                if theta < 0.0 {
+                    theta += TWO_PI;
+                } else {
+                    theta -= TWO_PI;
+                }
+            }
         }
 
         Self {
@@ -75,7 +84,7 @@ impl Vec3 {
     #[pyo3(signature = (v, width = 1, height = 1))]
     pub fn spherical_to_image(v: &Self, width: usize, height: usize) -> (f64, f64) {
         let (theta, phi) = (v.y, v.z);
-        let x = (theta / (2.0 * PI)) * width as f64;
+        let x = (theta / TWO_PI) * width as f64;
         let y = (phi / PI) * height as f64;
         (x, y)
     }
@@ -83,7 +92,7 @@ impl Vec3 {
     #[staticmethod]
     #[pyo3(signature = (x, y, width = 1, height = 1))]
     pub fn image_to_spherical(x: f64, y: f64, width: usize, height: usize) -> Self {
-        let theta = (x / width as f64) * 2.0 * PI;
+        let theta = (x / width as f64) * TWO_PI;
         let phi = (y / height as f64) * PI;
         Self {
             x: 1.0,
@@ -219,6 +228,10 @@ impl Vec3 {
         *self != *other
     }
 
+    pub fn __getitem__(&self, index: usize) -> f64 {
+        self[index]
+    }
+
     pub fn __str__(&self) -> String {
         format!("({}, {}, {})", self.x, self.y, self.z)
     }
@@ -312,12 +325,34 @@ impl Mul<Vec3> for f64 {
     }
 }
 
+impl Mul<Mat4> for Vec3 {
+    type Output = Vec3;
+
+    fn mul(self, mat: Mat4) -> Vec3 {
+        Vec3 {
+            x: mat[(0, 0)] * self.x + mat[(0, 1)] * self.y + mat[(0, 2)] * self.z + mat[(0, 3)],
+            y: mat[(1, 0)] * self.x + mat[(1, 1)] * self.y + mat[(1, 2)] * self.z + mat[(1, 3)],
+            z: mat[(2, 0)] * self.x + mat[(2, 1)] * self.y + mat[(2, 2)] * self.z + mat[(2, 3)],
+        }
+    }
+}
+
 impl MulAssign<f64> for Vec3 {
     fn mul_assign(&mut self, factor: f64) {
         *self = Self {
             x: self.x * factor,
             y: self.y * factor,
             z: self.z * factor,
+        };
+    }
+}
+
+impl MulAssign<Mat4> for Vec3 {
+    fn mul_assign(&mut self, mat: Mat4) {
+        *self = Self {
+            x: mat[(0, 0)] * self.x + mat[(0, 1)] * self.y + mat[(0, 2)] * self.z + mat[(0, 3)],
+            y: mat[(1, 0)] * self.x + mat[(1, 1)] * self.y + mat[(1, 2)] * self.z + mat[(1, 3)],
+            z: mat[(2, 0)] * self.x + mat[(2, 1)] * self.y + mat[(2, 2)] * self.z + mat[(2, 3)],
         };
     }
 }
