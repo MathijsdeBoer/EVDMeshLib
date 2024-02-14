@@ -22,7 +22,7 @@ pub struct Camera {
     #[pyo3(get, set)]
     pub forward: Vec3,
     #[pyo3(get, set)]
-    pub right: Vec3,
+    pub left: Vec3,
     #[pyo3(get, set)]
     pub up: Vec3,
 
@@ -56,8 +56,8 @@ impl Camera {
         aspect_ratio: Option<f64>,
         size: Option<f64>,
     ) -> Self {
-        let right = up.cross(&forward).unit_vector();
-        let up = right.cross(&forward).unit_vector();
+        let left = -forward.cross(&up).unit_vector();
+        let up = forward.cross(&left).unit_vector();
 
         match camera_type {
             CameraType::Perspective => {
@@ -67,7 +67,7 @@ impl Camera {
                 Self {
                     origin,
                     forward,
-                    right,
+                    left,
                     up,
                     x_resolution,
                     y_resolution,
@@ -84,7 +84,7 @@ impl Camera {
                 Self {
                     origin,
                     forward,
-                    right,
+                    left,
                     up,
                     x_resolution,
                     y_resolution,
@@ -98,7 +98,7 @@ impl Camera {
                 Self {
                     origin,
                     forward,
-                    right,
+                    left,
                     up,
                     x_resolution,
                     y_resolution,
@@ -130,14 +130,20 @@ impl Camera {
                 // direction, so we need to subtract 0.5 * PI from theta.
                 let theta: f64 = TWO_PI * (x as f64 / self.x_resolution as f64) - HALF_PI;
 
+                println!("Pixel: ({}, {})", x, y);
+                println!("Theta: {}, Phi: {}", theta, phi);
+
                 // Direction in spherical coordinates
                 let spherical = Vec3::new(1.0, theta, phi);
+                println!("Spherical: {:?}", spherical);
                 // Direction in camera space
                 let camera_dir = Vec3::spherical_to_cartesian(&spherical).unit_vector();
+                println!("Camera dir: {:?}", camera_dir);
                 // Direction in world space, based on camera orientation
-                let world_dir = self.right * camera_dir.x
+                let world_dir = self.left * camera_dir.x
                     + self.forward * camera_dir.y
-                    + self.up * -camera_dir.z;
+                    + self.up * camera_dir.z;
+                println!("World dir: {:?}", world_dir);
 
                 Ray::new(self.origin, world_dir)
             }
@@ -156,7 +162,7 @@ impl Camera {
             CameraType::Equirectangular => {
                 let direction_world = (*point - self.origin).unit_vector();
                 let direction_camera = Vec3 {
-                    x: direction_world.dot(&self.right),
+                    x: direction_world.dot(&self.left),
                     y: direction_world.dot(&self.forward),
                     z: direction_world.dot(&self.up),
                 };
@@ -181,39 +187,30 @@ impl Camera {
             }
         }
     }
-
-    pub fn translate(&mut self, vec: &Vec3) {
-        self.origin += self.right * vec.x + self.up * vec.y + self.forward * vec.z;
-    }
-
-    pub fn rotate(&mut self, axis: &Vec3, angle: f64) {
-        let original_origin = self.origin;
-        self.translate(&-original_origin);
-        self.forward = self.forward.rotate_around(axis, angle);
-        self.right = self.right.rotate_around(axis, angle);
-        self.up = self.up.rotate_around(axis, angle);
-        self.translate(&original_origin);
-    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::linalg::Vec3;
-    use crate::rendering::Ray;
 
     #[test]
-    fn test_equirectangular_camera_cast_ray() {
+    fn test_equirectangular_cast_ray() {
         let origin = Vec3::new(0.0, 0.0, 0.0);
         let forward = Vec3::new(0.0, -1.0, 0.0);
         let up = Vec3::new(0.0, 0.0, 1.0);
+
+        let resolution = 512;
+        let half_res = resolution / 2;
+        let one_quarter_res = resolution / 4;
+        let three_quarters_res = one_quarter_res * 3;
 
         let camera = Camera::new(
             origin,
             forward,
             up,
-            100,
-            100,
+            resolution,
+            half_res,
             CameraType::Equirectangular,
             None,
             None,
@@ -221,13 +218,55 @@ mod test {
         );
 
         let directions = vec![
-            (50, 50, forward),
-            (0, 50, -forward),
-            (0, 0, up),
-            (99, 0, up),
-            (0, 99, -up),
-            (75, 50, camera.right),
-            (25, 50, -camera.right),
+            (half_res, one_quarter_res, camera.forward),
+            (0, one_quarter_res, -camera.forward),
+            (three_quarters_res, one_quarter_res, -camera.left),
+            (one_quarter_res, one_quarter_res, camera.left),
+            (0, 0, camera.up),
+            (resolution, 0, camera.up),
+            (0, half_res, -camera.up),
+        ];
+
+        for (x, y, expected_direction) in directions {
+            let ray = camera.cast_ray(x, y);
+            assert_eq!(
+                ray.direction, expected_direction,
+                "Testing pixel ({}, {})", x, y
+            );
+        }
+    }
+
+    #[test]
+    fn test_equirectangular_cast_ray2() {
+        let origin = Vec3::new(0.0, 0.0, 0.0);
+        let forward = Vec3::new(1.0, 0.0, 0.0);
+        let up = Vec3::new(0.0, 0.0, 1.0);
+
+        let resolution = 512;
+        let half_res = resolution / 2;
+        let one_quarter_res = resolution / 4;
+        let three_quarters_res = one_quarter_res * 3;
+
+        let camera = Camera::new(
+            origin,
+            forward,
+            up,
+            resolution,
+            half_res,
+            CameraType::Equirectangular,
+            None,
+            None,
+            None,
+        );
+
+        let directions = vec![
+            (half_res, one_quarter_res, camera.forward),
+            (0, one_quarter_res, -camera.forward),
+            (three_quarters_res, one_quarter_res, -camera.left),
+            (one_quarter_res, one_quarter_res, camera.left),
+            (0, 0, camera.up),
+            (resolution, 0, camera.up),
+            (0, half_res, -camera.up),
         ];
 
         for (x, y, expected_direction) in directions {
@@ -254,8 +293,8 @@ mod test {
         );
 
         let points = vec![
-            (Vec3::new(0.0, 0.0, 1.0), (0.25, 1.0)),
-            (Vec3::new(0.0, 0.0, -1.0), (0.25, 0.0)),
+            (Vec3::new(0.0, 0.0, 1.0), (0.25, 0.0)),
+            (Vec3::new(0.0, 0.0, -1.0), (0.25, 1.0)),
 
             (Vec3::new(0.0, 1.0, 0.0), (0.0, 0.5)),
             (Vec3::new(0.0, -1.0, 0.0), (0.5, 0.5)),
@@ -263,15 +302,15 @@ mod test {
             (Vec3::new(1.0, 0.0, 0.0), (0.25, 0.5)),
             (Vec3::new(-1.0, 0.0, 0.0), (0.75, 0.5)),
 
-            (Vec3::new(0.0, -1.0, 1.0), (0.5, 0.75)),
-            (Vec3::new(0.0, 1.0, 1.0), (0.0, 0.75)),
-            (Vec3::new(1.0, 0.0, 1.0), (0.25, 0.75)),
-            (Vec3::new(-1.0, 0.0, 1.0), (0.75, 0.75)),
+            (Vec3::new(0.0, -1.0, 1.0), (0.5, 0.25)),
+            (Vec3::new(0.0, 1.0, 1.0), (0.0, 0.25)),
+            (Vec3::new(1.0, 0.0, 1.0), (0.25, 0.25)),
+            (Vec3::new(-1.0, 0.0, 1.0), (0.75, 0.25)),
 
-            (Vec3::new(0.0, -1.0, -1.0), (0.5, 0.25)),
-            (Vec3::new(0.0, 1.0, -1.0), (0.0, 0.25)),
-            (Vec3::new(1.0, 0.0, -1.0), (0.25, 0.25)),
-            (Vec3::new(-1.0, 0.0, -1.0), (0.75, 0.25)),
+            (Vec3::new(0.0, -1.0, -1.0), (0.5, 0.75)),
+            (Vec3::new(0.0, 1.0, -1.0), (0.0, 0.75)),
+            (Vec3::new(1.0, 0.0, -1.0), (0.25, 0.75)),
+            (Vec3::new(-1.0, 0.0, -1.0), (0.75, 0.75)),
         ];
 
         for (point, (x, y)) in points {

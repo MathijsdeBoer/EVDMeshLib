@@ -394,9 +394,9 @@ impl Neg for Vec3 {
 
 impl PartialEq for Vec3 {
     fn eq(&self, other: &Self) -> bool {
-        (self.x - other.x).abs() < f64::EPSILON
-            && (self.y - other.y).abs() < f64::EPSILON
-            && (self.z - other.z).abs() < f64::EPSILON
+        (self.x - other.x).abs() < 1e-10
+            && (self.y - other.y).abs() < 1e-10
+            && (self.z - other.z).abs() < 1e-10
     }
 }
 

@@ -1,7 +1,6 @@
 use std::fs::OpenOptions;
 use std::ops::Index;
 
-use crate::geometry::bvh::Bvh;
 use ndarray::{Array3, Ix3};
 use numpy::{IntoPyArray, PyArray};
 use pyo3::prelude::*;
@@ -113,11 +112,6 @@ pub struct Mesh {
 
     vertices: Vec<Vec3>,
     triangles: Vec<Triangle>,
-
-    #[pyo3(get)]
-    pub bvh: Option<Bvh>,
-    #[pyo3(get)]
-    pub bvh_dirty: bool,
 }
 
 #[pymethods]
@@ -152,8 +146,6 @@ impl Mesh {
             origin,
             vertices,
             triangles: in_triangles,
-            bvh: None,
-            bvh_dirty: true,
         }
     }
 
@@ -202,8 +194,6 @@ impl Mesh {
             origin: Vec3::new(0.0, 0.0, 0.0),
             vertices,
             triangles,
-            bvh: None,
-            bvh_dirty: true,
         };
 
         let origin = mesh
@@ -271,13 +261,6 @@ impl Mesh {
         samples
     }
 
-    #[pyo3(signature = (max_depth=8, min_leaf_size=10))]
-    pub fn generate_bvh(&mut self, max_depth: usize, min_leaf_size: usize) {
-        let bvh = Bvh::new(&self.vertices, &self.triangles, max_depth, min_leaf_size);
-        self.bvh = Some(bvh);
-        self.bvh_dirty = false;
-    }
-
     pub fn recalculate_normals(&mut self) {
         // Calculate the normal of each triangle
         self.triangles.par_iter_mut().for_each(|triangle| {
@@ -331,14 +314,7 @@ impl Mesh {
         sorting: IntersectionSort,
         epsilon: f64,
     ) -> Option<Intersection> {
-        let use_bvh = self.bvh.is_some() && !self.bvh_dirty;
-
-        let intersections = if use_bvh {
-            todo!("BVH is actively detrimental to performance. Use brute force instead.");
-            self.intersect_bvh(ray, epsilon)
-        } else {
-            self.intersect_brute_force(ray, epsilon)
-        };
+        let intersections = self.intersect_brute_force(ray, epsilon);
 
         // Return the intersection point that is closest or farthest to the ray's origin,
         // depending on the sorting parameter
@@ -470,7 +446,6 @@ impl Mesh {
     #[setter]
     pub fn set_vertices(&mut self, vertices: Vec<Vec3>) {
         self.vertices = vertices;
-        self.bvh_dirty = true;
     }
 
     #[getter]
@@ -501,7 +476,6 @@ impl Mesh {
                 }
             })
             .collect();
-        self.bvh_dirty = true;
     }
 }
 
@@ -515,18 +489,6 @@ impl Mesh {
         let v213 = self.vertices[j].x * self.vertices[i].y * self.vertices[k].z;
         let v123 = self.vertices[i].x * self.vertices[j].y * self.vertices[k].z;
         (1.0 / 6.0) * (-v321 + v231 + v312 - v132 - v213 + v123)
-    }
-
-    fn intersect_bvh(&self, ray: &Ray, epsilon: f64) -> Vec<Intersection> {
-        self.bvh
-            .as_ref()
-            .unwrap()
-            .intersect(ray, epsilon)
-            .iter()
-            .filter_map(|index| {
-                ray_triangle_intersect(ray, &self.triangles[*index], &self.vertices, epsilon)
-            })
-            .collect()
     }
 
     fn intersect_brute_force(&self, ray: &Ray, epsilon: f64) -> Vec<Intersection> {

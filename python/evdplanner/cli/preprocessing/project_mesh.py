@@ -31,6 +31,7 @@ from imageio import imwrite
     ),
 )
 @click.option(
+    "-r",
     "--resolution",
     type=int,
     default=1024,
