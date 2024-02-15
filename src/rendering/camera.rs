@@ -130,20 +130,14 @@ impl Camera {
                 // direction, so we need to subtract 0.5 * PI from theta.
                 let theta: f64 = TWO_PI * (x as f64 / self.x_resolution as f64) - HALF_PI;
 
-                println!("Pixel: ({}, {})", x, y);
-                println!("Theta: {}, Phi: {}", theta, phi);
-
                 // Direction in spherical coordinates
                 let spherical = Vec3::new(1.0, theta, phi);
-                println!("Spherical: {:?}", spherical);
                 // Direction in camera space
                 let camera_dir = Vec3::spherical_to_cartesian(&spherical).unit_vector();
-                println!("Camera dir: {:?}", camera_dir);
                 // Direction in world space, based on camera orientation
                 let world_dir = self.left * camera_dir.x
                     + self.forward * camera_dir.y
                     + self.up * camera_dir.z;
-                println!("World dir: {:?}", world_dir);
 
                 Ray::new(self.origin, world_dir)
             }
