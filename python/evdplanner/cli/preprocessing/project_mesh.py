@@ -82,6 +82,8 @@ def project_mesh(
     keypoints_file: Path = None,
     strict: bool = False,
 ):
+    np.seterr(all="raise")
+
     if ctx.obj is None:
         ctx.obj = {}
 
