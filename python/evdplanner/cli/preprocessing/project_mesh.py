@@ -115,8 +115,7 @@ def equirectangular(
         print("Initializing camera...")
 
     camera = Camera(
-        # ctx.obj["mesh"].origin,
-        Vec3(0, 0, 0),
+        ctx.obj["mesh"].origin,
         forward=Vec3(0, -1, 0),
         up=Vec3(0, 0, 1),
         x_resolution=ctx.obj["resolution"],
