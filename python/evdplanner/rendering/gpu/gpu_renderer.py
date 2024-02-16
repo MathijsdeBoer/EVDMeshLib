@@ -140,11 +140,8 @@ class GPURenderer(CPURenderer):
                             pixels[pix_y, pix_x][2] = normal[1]
                             pixels[pix_y, pix_x][3] = normal[2]
 
-        print("Generating ray directions...")
         generate_ray_directions()
-        print("Flattening mesh...")
         start_time = time()
         flatten_mesh_kernel()
-        print(f"Flattening mesh took {time() - start_time:.2f}s")
 
         return pixels.to_numpy()

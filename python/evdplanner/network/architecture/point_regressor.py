@@ -26,6 +26,37 @@ class ParallelConcat(nn.Module):
 
 
 class PointRegressor(Regressor, OptimizableModel):
+    def __init__(
+        self,
+        maps: list[str],
+        keypoints: list[str],
+        in_shape: Sequence[int],
+        out_shape: Sequence[int],
+        channels: Sequence[int],
+        strides: Sequence[int],
+        kernel_size: Sequence[int] | int = 3,
+        num_res_units: int = 2,
+        act=Act.PRELU,
+        norm=Norm.INSTANCE,
+        dropout: float | None = None,
+        bias: bool = True,
+    ) -> None:
+        super().__init__(
+            in_shape=in_shape,
+            out_shape=out_shape,
+            channels=channels,
+            strides=strides,
+            kernel_size=kernel_size,
+            num_res_units=num_res_units,
+            act=act,
+            norm=norm,
+            dropout=dropout,
+            bias=bias,
+        )
+
+        self.maps = maps
+        self.keypoints = keypoints
+
     def _get_layer(
         self, in_channels: int, out_channels: int, strides: int, is_last: bool
     ) -> nn.Sequential:
@@ -128,7 +159,8 @@ class PointRegressor(Regressor, OptimizableModel):
                 [
                     "mse",
                     "mae",
-                    "msae" "maae",
+                    "msae",
+                    "maae",
                 ],
             ),
         }
@@ -168,7 +200,7 @@ class PointRegressor(Regressor, OptimizableModel):
 
     @classmethod
     def from_optuna_parameters(
-        cls, parameters: dict[str, any], **kwargs: dict[str, Any]
+        cls, parameters: dict[str, any], **kwargs
     ) -> "PointRegressor":
         filters = tuple(
             min(parameters["filters"] * 2**i, parameters["max_filters"])
@@ -176,6 +208,8 @@ class PointRegressor(Regressor, OptimizableModel):
         )
 
         result = PointRegressor(
+            maps=kwargs["maps"],
+            keypoints=kwargs["keypoints"],
             in_shape=kwargs["in_shape"],
             out_shape=kwargs["out_shape"],
             channels=filters,
@@ -201,3 +235,7 @@ class PointRegressor(Regressor, OptimizableModel):
             "norm_fn",
             "dropout",
         ]
+
+    @property
+    def log_name(self) -> str:
+        return "point_regressor"

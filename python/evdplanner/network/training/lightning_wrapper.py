@@ -25,6 +25,9 @@ class LightningWrapper(pl.LightningModule):
         self.config = None
         self.loggable_hparams = []
 
+    def set_input_shape(self, shape: tuple[int, ...]) -> None:
+        self.example_input_array = torch.rand(shape)
+
     @staticmethod
     def build_wrapper(
         model: nn.Module,
@@ -83,7 +86,7 @@ class LightningWrapper(pl.LightningModule):
     def configure_optimizers(
         self,
     ) -> dict[str, torch.optim.Optimizer | torch.optim.lr_scheduler.LRScheduler | str]:
-        if self.lr_scheduler is None:
+        if self.scheduler is None:
             return {"optimizer": self.optimizer}
         else:
             return {
@@ -96,7 +99,7 @@ class LightningWrapper(pl.LightningModule):
         params = {
             key: value
             for key, value in self.config.items()
-            if not key.startswith("hp/") and key in self.loggable_parameters
+            if not key.startswith("hp/") and key in self.loggable_hparams
         }
 
         params["optimizer"] = self.optimizer.__class__.__name__
@@ -135,7 +138,7 @@ class LightningWrapper(pl.LightningModule):
     def validation_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> dict[str, Tensor]:
         x, y = batch["image"], batch["label"]
         y_hat = self(x)
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss(y_hat, y)
 
         output = {
             "val_loss": loss,
@@ -155,7 +158,7 @@ class LightningWrapper(pl.LightningModule):
     def test_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> dict[str, Tensor]:
         x, y = batch["image"], batch["label"]
         y_hat = self(x)
-        loss = self.loss_fn(y_hat, y)
+        loss = self.loss(y_hat, y)
 
         output = {
             "test_loss": loss,
@@ -169,3 +172,7 @@ class LightningWrapper(pl.LightningModule):
 
         self.log_dict(output, prog_bar=True, batch_size=x.shape[0], on_step=False, on_epoch=True)
         return output
+
+    @property
+    def log_name(self) -> str:
+        return self.model.log_name
