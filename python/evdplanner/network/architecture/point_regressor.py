@@ -1,12 +1,12 @@
 from math import prod
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import optuna
 import torch
 import torch.nn as nn
 from evdplanner.network.training.optimizable_model import OptimizableModel
 from monai.networks.blocks import ConvDenseBlock, Convolution
-from monai.networks.layers import Act, Flatten, Norm, Reshape
+from monai.networks.layers import Act, Flatten, Norm, Reshape, get_act_layer
 from monai.networks.nets import Regressor
 
 
@@ -36,8 +36,9 @@ class PointRegressor(Regressor, OptimizableModel):
         strides: Sequence[int],
         kernel_size: Sequence[int] | int = 3,
         num_res_units: int = 2,
-        act=Act.PRELU,
-        norm=Norm.INSTANCE,
+        act: nn.Module | Callable | str = Act.PRELU,
+        final_act: nn.Module | Callable | str | None = None,
+        norm: nn.Module | Callable | str = Norm.INSTANCE,
         dropout: float | None = None,
         bias: bool = True,
     ) -> None:
@@ -56,6 +57,10 @@ class PointRegressor(Regressor, OptimizableModel):
 
         self.maps = maps
         self.keypoints = keypoints
+
+        self.final_act = final_act
+        if isinstance(self.final_act, str):
+            self.final_act = get_act_layer(self.final_act)
 
     def _get_layer(
         self, in_channels: int, out_channels: int, strides: int, is_last: bool
@@ -117,13 +122,19 @@ class PointRegressor(Regressor, OptimizableModel):
 
         return nn.Sequential(ParallelConcat(point_paths), Reshape(*self.out_shape))
 
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = super().forward(x)
+        if self.final_act:
+            x = self.final_act(x)
+        return x
+
     @classmethod
     def get_optuna_parameters(cls, optuna_trial: optuna.Trial) -> dict[str, Any]:
         params: dict[str, Any] = {
             "optimizer": optuna_trial.suggest_categorical("optimizer", ["adam", "sgd"]),
             "optimizer_args": {
                 "lr": optuna_trial.suggest_float("lr", 1e-5, 1e-1, log=True),
-                "weight_decay": optuna_trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
+                "weight_decay": optuna_trial.suggest_float("weight_decay", 0.0, 1e-2, log=True),
             },
             "filters": optuna_trial.suggest_categorical("filters", [2**i for i in range(3, 6)]),
             "max_filters": optuna_trial.suggest_categorical(
@@ -152,6 +163,8 @@ class PointRegressor(Regressor, OptimizableModel):
             "final_act_fn": optuna_trial.suggest_categorical(
                 "final_act_fn",
                 [
+                    None,
+                    Act.RELU,
                     Act.SIGMOID,
                     Act.TANH,
                 ],
@@ -216,8 +229,9 @@ class PointRegressor(Regressor, OptimizableModel):
             strides=(2,) * parameters["num_blocks"],
             kernel_size=3,
             num_res_units=parameters["num_residual_units"],
-            act=parameters["act_fn"] or Act.PRELU,
-            norm=parameters["norm_fn"] or Norm.INSTANCE,
+            act=parameters.get("act_fn", Act.PRELU),
+            final_act=parameters.get("final_act_fn", None),
+            norm=parameters.get("norm_fn", Norm.INSTANCE),
             dropout=parameters["dropout"],
             bias=True,
         )
@@ -232,6 +246,7 @@ class PointRegressor(Regressor, OptimizableModel):
             "num_blocks",
             "num_residual_units",
             "act_fn",
+            "final_act_fn",
             "norm_fn",
             "dropout",
         ]

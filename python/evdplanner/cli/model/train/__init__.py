@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 import click
@@ -147,13 +148,21 @@ def train(
             in_shape=(4, resolution // 2, resolution),
             out_shape=(len(keypoints), 2),
         )
+
+        optimizer = get_optimizer(
+            config["optimizer"], core_model.parameters(), **config["optimizer_args"]
+        )
         model = LightningWrapper.build_wrapper(
             model=core_model,
             loss=get_loss_fn(config["loss_fn"]),
-            optimizer=get_optimizer(
-                config["optimizer"], core_model.parameters(), **config["optimizer_args"]
+            optimizer=optimizer,
+            scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=math.floor(
+                    epochs * int(len(train_samples) * dm.train_split) / config["batch_size"]
+                ),
+                eta_min=1e-8,
             ),
-            scheduler=None,
             metrics=[
                 MSEMetric(),
                 MAEMetric(),
@@ -164,6 +173,14 @@ def train(
         )
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
-    model, test_loss = train_model(model, dm, log_dir, epochs, anatomy, mode="train")
+    model, test_loss = train_model(
+        model,
+        dm,
+        log_dir,
+        epochs,
+        anatomy,
+        mode="train",
+        additional_callbacks=[pl.callbacks.LearningRateMonitor(logging_interval="step")],
+    )
 
     torch.save(model, model_path)

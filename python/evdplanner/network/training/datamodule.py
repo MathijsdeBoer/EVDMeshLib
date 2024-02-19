@@ -49,9 +49,10 @@ class EVDPlannerDataModule(LightningDataModule):
         test_samples: list[dict] = None,
         load_transforms: list[mt.Transform] = None,
         augment_transforms: list[mt.Transform] = None,
+        val_split: float = 0.2,
         batch_size: int = 1,
         num_workers: int = 0,
-    ):
+    ) -> None:
         validate_samples(train_samples, maps, keypoints_key)
         if test_samples:
             validate_samples(test_samples, maps, keypoints_key)
@@ -63,6 +64,9 @@ class EVDPlannerDataModule(LightningDataModule):
         self.load_transforms = load_transforms or []
         self.augment_transforms = augment_transforms or []
 
+        self.train_split = 1.0 - val_split
+        self.val_split = val_split
+
         self.batch_size = batch_size
         self.num_workers = num_workers
 
@@ -70,13 +74,13 @@ class EVDPlannerDataModule(LightningDataModule):
         self.val_data = None
         self.test_data = None
 
-    def setup(self, stage: str | None = None):
+    def setup(self, stage: str | None = None) -> None:
         self.train_data, self.val_data = random_split(
             CacheDataset(
                 self.train_samples,
                 transform=mt.Compose(self.load_transforms + self.augment_transforms),
             ),
-            [0.8, 0.2],
+            [self.train_split, self.val_split],
         )
         if self.test_samples:
             self.test_data = CacheDataset(
@@ -84,7 +88,7 @@ class EVDPlannerDataModule(LightningDataModule):
                 transform=mt.Compose(self.load_transforms),
             )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         return DataLoader(
             self.train_data,
             batch_size=self.batch_size,
@@ -93,7 +97,7 @@ class EVDPlannerDataModule(LightningDataModule):
             persistent_workers=self.num_workers > 0,
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader:
         return DataLoader(
             self.val_data,
             batch_size=1,
@@ -102,7 +106,7 @@ class EVDPlannerDataModule(LightningDataModule):
             persistent_workers=self.num_workers > 0,
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test_data,
             batch_size=1,

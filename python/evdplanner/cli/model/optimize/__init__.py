@@ -53,6 +53,15 @@ import click
     help="Root directory containing test data.",
 )
 @click.option(
+    "--initial",
+    "initial_config",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    help="Path to initial configuration file.",
+)
+@click.option(
     "--seed",
     type=int,
     required=False,
@@ -77,6 +86,7 @@ def optimize(
     n_trials: int,
     epochs: int = 100,
     test_root: Path | None = None,
+    initial_config: Path | None = None,
     seed: int | None = None,
     resolution: int = 1024,
     num_workers: int = 0,
@@ -167,8 +177,10 @@ def optimize(
             anatomy,
             mode="optimize",
             additional_callbacks=[
-                PyTorchLightningPruningCallback(trial, monitor=f"hp/{metrics[0].__class__.__name__}"),
-            ]
+                PyTorchLightningPruningCallback(
+                    trial, monitor=f"hp/{metrics[0].__class__.__name__}"
+                ),
+            ],
         )
         return test_loss[f"hp/{metrics[0].__class__.__name__}"]
 
@@ -183,6 +195,12 @@ def optimize(
         direction="minimize",
         pruner=pruner,
     )
+
+    if initial_config:
+        with initial_config.open("r") as file:
+            initial_config = json.load(file)
+            study.enqueue_trial(initial_config, user_attrs={"source": f"{initial_config.name}"})
+
     study.optimize(
         _objective,
         n_trials=n_trials,

@@ -5,6 +5,9 @@ from torch import nn
 
 
 class OptimizableModel(ABC, nn.Module):
+    maps: list[str]
+    keypoints: list[str]
+
     @classmethod
     @abstractmethod
     def get_optuna_parameters(cls, optuna_trial: optuna.Trial) -> dict[str, any]:

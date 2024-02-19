@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Mapping
 
 import lightning.pytorch as pl
-
 from evdplanner.network.training.datamodule import EVDPlannerDataModule
 from evdplanner.network.training.lightning_wrapper import LightningWrapper
 
@@ -84,7 +83,7 @@ def train_model(
         ),
         log_every_n_steps=1,
         precision="16-mixed",
-        callbacks=callbacks
+        callbacks=callbacks,
     )
 
     trainer.fit(model, datamodule=datamodule)

@@ -18,8 +18,8 @@ class LightningWrapper(pl.LightningModule):
 
         self.model = None
         self.loss = None
-        self.optimizer = None
-        self.scheduler = None
+        self.optimizer: torch.optim.Optimizer | None = None
+        self.scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
         self.metrics = []
 
         self.config = None
@@ -92,8 +92,7 @@ class LightningWrapper(pl.LightningModule):
         else:
             return {
                 "optimizer": self.optimizer,
-                "lr_scheduler": self.lr_scheduler,
-                "monitor": self.lr_scheduler_metric,
+                "lr_scheduler": self.scheduler,
             }
 
     def on_train_start(self) -> None:
@@ -104,6 +103,10 @@ class LightningWrapper(pl.LightningModule):
             if key in self.loggable_hparams:
                 params["model"][key] = value
         params["model"]["name"] = self.model.__class__.__name__
+        params["model"]["input_shape"] = self.example_input_array.shape[1:]
+        params["model"]["output_shape"] = self.model.out_shape
+        params["model"]["maps"] = self.model.maps
+        params["model"]["keypoints"] = self.model.keypoints
 
         params["loss"] = self.loss.__class__.__name__
 
@@ -111,8 +114,12 @@ class LightningWrapper(pl.LightningModule):
         params["optimizer"]["name"] = self.optimizer.__class__.__name__
 
         if self.scheduler is not None:
-            params["scheduler"] = self.scheduler.defaults
+            params["scheduler"] = {}
             params["scheduler"]["name"] = self.scheduler.__class__.__name__
+
+            for key, value in self.scheduler.__dict__.items():
+                if key in self.loggable_hparams:
+                    params["scheduler"][key] = value
 
         self.logger.log_hyperparams(
             params, {f"hp/{x.__class__.__name__}": float("inf") for x in self.metrics}
