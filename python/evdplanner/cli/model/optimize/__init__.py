@@ -186,7 +186,7 @@ def optimize(
     study.optimize(
         _objective,
         n_trials=n_trials,
-        catch=[torch.cuda.OutOfMemoryError],
+        catch=[torch.cuda.OutOfMemoryError, RuntimeError],
         gc_after_trial=True,
     )
 
