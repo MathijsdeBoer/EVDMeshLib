@@ -12,14 +12,12 @@ class OptimizableModel(ABC, nn.Module):
 
     @classmethod
     @abstractmethod
-    def from_optuna_parameters(
-        cls, parameters: dict[str, any], **kwargs
-    ) -> "OptimizableModel":
+    def from_optuna_parameters(cls, parameters: dict[str, any], **kwargs) -> "OptimizableModel":
         raise NotImplementedError
 
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def loggable_parameters(cls) -> list[str]:
+    def loggable_parameters() -> list[str]:
         raise NotImplementedError
 
     @property

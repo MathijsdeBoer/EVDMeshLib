@@ -14,14 +14,18 @@ import click
 @click.option(
     "--train",
     "train_root",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
     required=True,
     help="Root directory containing training data.",
 )
 @click.option(
     "-l",
     "--log-dir",
-    type=click.Path(exists=False, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=False, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
     required=True,
     help="Directory to store logs.",
 )
@@ -42,7 +46,9 @@ import click
 @click.option(
     "--test",
     "test_root",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
     required=False,
     help="Root directory containing test data.",
 )
@@ -76,22 +82,21 @@ def optimize(
     num_workers: int = 0,
 ):
     import json
+    from math import pi
 
     import lightning.pytorch as pl
     import optuna
     import torch
-    from monai.metrics import MSEMetric, MAEMetric
-
     from evdplanner.cli.model._util import get_data, train_model
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
     from evdplanner.network.training.lightning_wrapper import LightningWrapper
-    from evdplanner.network.training.losses import MeanSquaredAngularError, MeanAbsoluteAngularError
-    from evdplanner.network.training.utils import get_loss_fn, get_optimizer
+    from evdplanner.network.training.losses import (
+        MeanAbsoluteAngularError,
+        MeanSquaredAngularError,
+    )
     from evdplanner.network.transforms.defaults import default_load_transforms
-
-    if seed:
-        pl.seed_everything(seed)
+    from monai.metrics import MAEMetric, MSEMetric
 
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
@@ -107,43 +112,54 @@ def optimize(
         test_samples = None
 
     def _objective(trial: optuna.Trial) -> float:
+        if seed:
+            pl.seed_everything(seed)
+
+        batch_size = trial.suggest_int("batch_size", 1, 32)
+
         dm = EVDPlannerDataModule(
             train_samples=train_samples,
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,
             load_transforms=default_load_transforms(maps, keypoints),
-            batch_size=trial.suggest_int("batch_size", 1, 32),
+            batch_size=batch_size,
             num_workers=num_workers,
         )
 
-        config = PointRegressor.get_optuna_parameters(trial)
-        core_model = PointRegressor.from_optuna_parameters(
-            config,
+        if anatomy == "skin":
+            x_range = (0.0, 2.0 * pi)
+            y_range = (0.0, pi)
+        elif anatomy == "ventricles":
+            x_range = (0.0, 1.0)
+            y_range = (0.0, 1.0)
+        else:
+            raise ValueError(f"Anatomy '{anatomy}' not recognized.")
+
+        metrics = [
+            MAEMetric(),
+            MSEMetric(),
+            MeanSquaredAngularError(x_range=x_range, y_range=y_range),
+            MeanAbsoluteAngularError(x_range=x_range, y_range=y_range),
+        ]
+
+        model = LightningWrapper.from_optuna_parameters(
+            model=PointRegressor,
+            trial=trial,
+            metrics=metrics,
             maps=maps,
             keypoints=keypoints,
             in_shape=(4, resolution // 2, resolution),
             out_shape=(len(keypoints), 2),
         )
-
-        model = LightningWrapper.build_wrapper(
-            model=core_model,
-            loss=get_loss_fn(config["loss_fn"]),
-            optimizer=get_optimizer(
-                config["optimizer"], core_model.parameters(), **config["optimizer_args"]
-            ),
-            scheduler=None,
-            metrics=[
-                MSEMetric(),
-                MAEMetric(),
-                MeanSquaredAngularError(),
-                MeanAbsoluteAngularError(),
-            ],
-        )
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
-        model, test_loss = train_model(model, dm, log_dir, epochs)
-        return test_loss
+        with (log_dir / "trial_params.json").open("w") as file:
+            model.config["batch_size"] = batch_size
+            json.dump(model.config, file, indent=4)
+
+        model, test_loss = train_model(model, dm, log_dir, epochs, anatomy, mode="optimize")
+        return test_loss[f"hp/{metrics[0].__class__.__name__}"]
 
     pruner = optuna.pruners.MedianPruner(
         n_startup_trials=5,
@@ -159,7 +175,7 @@ def optimize(
     study.optimize(
         _objective,
         n_trials=n_trials,
-        catch=[torch.cuda.OutOfMemoryError],
+        catch=[torch.cuda.OutOfMemoryError, RuntimeError],
         gc_after_trial=True,
     )
 

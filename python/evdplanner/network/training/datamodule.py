@@ -7,9 +7,9 @@ from torch.utils.data import DataLoader, random_split
 
 
 def validate_samples(
-        samples: list[dict],
-        maps: list[str],
-        keypoints_key: str,
+    samples: list[dict],
+    maps: list[str],
+    keypoints_key: str,
 ) -> None:
     for sample in samples:
         if not isinstance(sample, dict):

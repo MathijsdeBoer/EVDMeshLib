@@ -5,7 +5,6 @@ from time import time
 
 import click
 import numpy as np
-
 from evdplanner.markups.markup import MarkupTypes
 from evdplanner.markups.markup_manager import MarkupManager
 from evdplanner.rendering.utils import normalize_image
@@ -57,9 +56,7 @@ from imageio import imwrite
     "-k",
     "--keypoints",
     "keypoints_file",
-    type=click.Path(
-        exists=True, dir_okay=False, resolve_path=True, path_type=Path
-    ),
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path),
     required=False,
     default=None,
     show_default=True,

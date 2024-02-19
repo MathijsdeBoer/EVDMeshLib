@@ -125,10 +125,12 @@ class PointRegressor(Regressor, OptimizableModel):
                 "lr": optuna_trial.suggest_float("lr", 1e-5, 1e-1, log=True),
                 "weight_decay": optuna_trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
             },
-            "filters": optuna_trial.suggest_int("filters", 16, 64, log=True),
-            "max_filters": optuna_trial.suggest_int("max_filters", 16, 256),
-            "num_blocks": optuna_trial.suggest_int("num_blocks", 2, 4),
-            "num_residual_units": optuna_trial.suggest_int("num_residual_units", 0, 3),
+            "filters": optuna_trial.suggest_categorical("filters", [2**i for i in range(3, 6)]),
+            "max_filters": optuna_trial.suggest_categorical(
+                "max_filters", [2**i for i in range(6, 9)]
+            ),
+            "num_blocks": optuna_trial.suggest_int("num_blocks", 1, 8),
+            "num_residual_units": optuna_trial.suggest_int("num_residual_units", 0, 4),
             "act_fn": optuna_trial.suggest_categorical(
                 "act_fn",
                 [
@@ -199,9 +201,7 @@ class PointRegressor(Regressor, OptimizableModel):
         return params
 
     @classmethod
-    def from_optuna_parameters(
-        cls, parameters: dict[str, any], **kwargs
-    ) -> "PointRegressor":
+    def from_optuna_parameters(cls, parameters: dict[str, any], **kwargs) -> "PointRegressor":
         filters = tuple(
             min(parameters["filters"] * 2**i, parameters["max_filters"])
             for i in range(parameters["num_blocks"])
@@ -224,8 +224,8 @@ class PointRegressor(Regressor, OptimizableModel):
 
         return result
 
-    @classmethod
-    def loggable_parameters(cls) -> list[str]:
+    @staticmethod
+    def loggable_parameters() -> list[str]:
         return [
             "filters",
             "max_filters",

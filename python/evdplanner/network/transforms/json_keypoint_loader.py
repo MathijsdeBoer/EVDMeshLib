@@ -8,11 +8,11 @@ import torch
 
 class JsonKeypointLoaderd(mt.MapTransform):
     def __init__(
-            self,
-            json_key: str,
-            output_key: str,
-            keypoint_names: list[str] | None = None,
-            allow_missing_keys: bool = False,
+        self,
+        json_key: str,
+        output_key: str,
+        keypoint_names: list[str] | None = None,
+        allow_missing_keys: bool = False,
     ) -> None:
         super().__init__(keys=[json_key], allow_missing_keys=allow_missing_keys)
         self.json_key = json_key
@@ -28,11 +28,8 @@ class JsonKeypointLoaderd(mt.MapTransform):
 
             if self.keypoint_names:
                 d[self.output_key] = torch.tensor(
-                    [
-                        x["position"]
-                        for x in keypoints
-                        if x["label"] in self.keypoint_names
-                    ]
+                    [x["position"] for x in keypoints if x["label"] in self.keypoint_names],
+                    dtype=torch.float32,
                 )
             else:
                 d[self.output_key] = torch.tensor([x["position"] for x in keypoints])

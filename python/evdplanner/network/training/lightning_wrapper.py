@@ -33,9 +33,9 @@ class LightningWrapper(pl.LightningModule):
         model: nn.Module,
         loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
         optimizer: torch.optim.Optimizer,
+        config: dict[str, any] | None,
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         metrics: list[nn.Module | Callable[[Tensor, Tensor], Tensor]] | None = None,
-        config: dict[str, any] | None = None,
     ) -> "LightningWrapper":
         wrapper = LightningWrapper()
         wrapper.model = model
@@ -52,29 +52,30 @@ class LightningWrapper(pl.LightningModule):
         model: type[OptimizableModel],
         trial: optuna.Trial,
         metrics: list[nn.Module | Callable[[Tensor, Tensor], Tensor]] | None = None,
+        **kwargs,
     ) -> "LightningWrapper":
         params = model.get_optuna_parameters(trial)
         loggable_params = model.loggable_parameters()
-        model = model.from_optuna_parameters(params)
-        loss = get_loss_fn(params["loss"])
+        model = model.from_optuna_parameters(params, **kwargs)
+        loss = get_loss_fn(params["loss_fn"])
         optimizer = get_optimizer(
-            params["optimizer"], model.parameters(), **params["optimizer_kwargs"]
+            params["optimizer"], model.parameters(), **params["optimizer_args"]
         )
 
         if params.get("scheduler", None) is None:
             scheduler = None
         else:
             scheduler = get_lr_scheduler(
-                params["scheduler"], optimizer, **params["scheduler_kwargs"]
+                params["scheduler"], optimizer, **params["scheduler_args"]
             )
 
         wrapper = cls.build_wrapper(
             model,
             loss,
             optimizer,
+            params,
             scheduler,
             metrics,
-            config=params,
         )
 
         wrapper.loggable_hparams = loggable_params
@@ -96,18 +97,22 @@ class LightningWrapper(pl.LightningModule):
             }
 
     def on_train_start(self) -> None:
-        params = {
-            key: value
-            for key, value in self.config.items()
-            if not key.startswith("hp/") and key in self.loggable_hparams
-        }
+        params = {}
 
-        params["optimizer"] = self.optimizer.__class__.__name__
-        params["optimizer_args"] = self.optimizer.defaults
+        params["model"] = {}
+        for key, value in self.config.items():
+            if key in self.loggable_hparams:
+                params["model"][key] = value
+        params["model"]["name"] = self.model.__class__.__name__
+
+        params["loss"] = self.loss.__class__.__name__
+
+        params["optimizer"] = self.optimizer.defaults
+        params["optimizer"]["name"] = self.optimizer.__class__.__name__
 
         if self.scheduler is not None:
-            params["scheduler"] = self.scheduler.__class__.__name__
-            params["scheduler_args"] = self.scheduler.defaults
+            params["scheduler"] = self.scheduler.defaults
+            params["scheduler"]["name"] = self.scheduler.__class__.__name__
 
         self.logger.log_hyperparams(
             params, {f"hp/{x.__class__.__name__}": float("inf") for x in self.metrics}
@@ -127,7 +132,7 @@ class LightningWrapper(pl.LightningModule):
 
         self.log_dict(
             output,
-            on_step=True,
+            on_step=False,
             on_epoch=True,
             prog_bar=True,
             batch_size=x.shape[0],
@@ -148,6 +153,7 @@ class LightningWrapper(pl.LightningModule):
             name = f"{metric.__class__.__name__}"
             value = metric(y_hat, y).mean()
             output[f"metric/val/{name}"] = value
+            self.log(f"hp/{name}", value)
 
         self.log_dict(output, prog_bar=True, batch_size=x.shape[0], on_step=False, on_epoch=True)
 

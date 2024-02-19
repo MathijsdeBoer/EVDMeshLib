@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
+from typing import List, Mapping, Tuple
 
 import lightning.pytorch as pl
-from torch import nn
-
 from evdplanner.network.training.datamodule import EVDPlannerDataModule
+from evdplanner.network.training.lightning_wrapper import LightningWrapper
+from torch import nn
 
 
 def get_data(
@@ -52,13 +53,15 @@ def get_data(
 
 
 def train_model(
-        model: pl.LightningModule,
-        datamodule: EVDPlannerDataModule,
-        log_dir: Path,
-        epochs: int,
-) -> tuple[nn.Module, float | None]:
-    from lightning.pytorch import loggers
+    model: LightningWrapper,
+    datamodule: EVDPlannerDataModule,
+    log_dir: Path,
+    epochs: int,
+    anatomy: str,
+    mode="train",
+) -> tuple[LightningWrapper, Mapping[str, float]]:
     from evdplanner.network.training.callbacks import KeypointPlotCallback
+    from lightning.pytorch import loggers
 
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -66,7 +69,7 @@ def train_model(
         max_epochs=epochs,
         logger=loggers.TensorBoardLogger(
             save_dir=log_dir,
-            name="evdplanner",
+            name=f"{mode}/{anatomy}/{model.log_name}",
             log_graph=True,
         ),
         log_every_n_steps=1,
@@ -74,12 +77,11 @@ def train_model(
         callbacks=[
             pl.callbacks.ModelCheckpoint(monitor="val_loss"),
             pl.callbacks.LearningRateMonitor(logging_interval="step"),
-            pl.callbacks.EarlyStopping(monitor="val_loss", patience=epochs // 10),
             KeypointPlotCallback(
                 filename="keypoint_plot.png",
                 log_image=True,
                 log_loss=True,
-            )
+            ),
         ],
     )
 
@@ -87,8 +89,7 @@ def train_model(
 
     if datamodule.test_data:
         result = trainer.test(model, datamodule=datamodule)
-        result = result[0]["test_loss"]
     else:
-        result = None
+        result = trainer.validate(model, datamodule=datamodule)
 
-    return model, result
+    return model, result[0]

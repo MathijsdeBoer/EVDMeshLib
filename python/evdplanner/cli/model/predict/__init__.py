@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-
 from evdplanner.network import PointRegressor
 
 
@@ -15,10 +14,10 @@ def predict_skin_mesh(
     verbose: bool = False,
 ):
     import torch
-
     from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
+
     if gpu_renderer:
         if verbose:
             print("Using GPU renderer.")
@@ -68,5 +67,3 @@ def predict_skin_mesh(
 
     if verbose:
         print("Saving...")
-
-

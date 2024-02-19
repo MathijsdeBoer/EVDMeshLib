@@ -1,7 +1,7 @@
 import click
-
-from evdplanner.cli.model.train import train
 from evdplanner.cli.model.optimize import optimize
+from evdplanner.cli.model.train import train
+
 
 @click.group()
 def model():

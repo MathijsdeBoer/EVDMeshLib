@@ -1,5 +1,4 @@
 import click
-
 from evdplanner.cli.plot.keypoints import keypoints
 
 

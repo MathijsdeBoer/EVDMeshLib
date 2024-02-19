@@ -14,28 +14,36 @@ import click
 @click.option(
     "--train",
     "train_root",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
     required=True,
     help="Root directory containing training data.",
 )
 @click.option(
     "-c",
     "--config",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path
+    ),
     required=True,
     help="Path to JSON configuration file.",
 )
 @click.option(
     "-l",
     "--log-dir",
-    type=click.Path(exists=False, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=False, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
     required=True,
     help="Directory to store logs.",
 )
 @click.option(
     "-m",
     "--model-path",
-    type=click.Path(exists=False, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=False, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path
+    ),
     required=True,
     help="Path to store trained model.",
 )
@@ -49,7 +57,9 @@ import click
 @click.option(
     "--test",
     "test_root",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
     required=False,
     help="Root directory containing test data.",
 )
@@ -91,8 +101,13 @@ def train(
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
     from evdplanner.network.training.lightning_wrapper import LightningWrapper
+    from evdplanner.network.training.losses import (
+        MeanAbsoluteAngularError,
+        MeanSquaredAngularError,
+    )
     from evdplanner.network.training.utils import get_loss_fn, get_optimizer
     from evdplanner.network.transforms.defaults import default_load_transforms
+    from monai.metrics import MAEMetric, MSEMetric
 
     if seed:
         pl.seed_everything(seed)
@@ -134,15 +149,21 @@ def train(
         )
         model = LightningWrapper.build_wrapper(
             model=core_model,
-            loss=get_loss_fn(config["loss"]),
+            loss=get_loss_fn(config["loss_fn"]),
             optimizer=get_optimizer(
-                config["optimizer"], core_model.parameters(), **config["optimizer_kwargs"]
+                config["optimizer"], core_model.parameters(), **config["optimizer_args"]
             ),
             scheduler=None,
-            metrics=None,
+            metrics=[
+                MSEMetric(),
+                MAEMetric(),
+                MeanSquaredAngularError(),
+                MeanAbsoluteAngularError(),
+            ],
+            config=config,
         )
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
-    model, test_loss = train_model(model, dm, log_dir, epochs)
+    model, test_loss = train_model(model, dm, log_dir, epochs, anatomy, mode="train")
 
     torch.save(model, model_path)

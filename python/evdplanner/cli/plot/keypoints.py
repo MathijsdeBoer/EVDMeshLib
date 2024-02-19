@@ -8,8 +8,12 @@ from imageio.v3 import imread
 
 
 @click.command()
-@click.argument("image", type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path))
-@click.argument("keypoints", type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path))
+@click.argument(
+    "image", type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path)
+)
+@click.argument(
+    "keypoints", type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path)
+)
 @click.argument("output", type=click.Path(dir_okay=False, resolve_path=True, path_type=Path))
 def keypoints(
     image: Path,
