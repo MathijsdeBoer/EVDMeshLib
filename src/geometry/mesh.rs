@@ -12,6 +12,22 @@ use stl_io::{create_stl_reader, write_stl};
 use crate::linalg::Vec3;
 use crate::rendering::{Intersection, IntersectionSort, Ray};
 
+/// Intersects a ray with a triangle.
+///
+/// This function attempts to intersect a ray with a triangle.
+/// If the ray intersects the triangle, the function returns the intersection point.
+/// Otherwise, it returns None.
+///
+/// # Arguments
+///
+/// * `ray` - A reference to the ray to intersect with the triangle.
+/// * `triangle` - A reference to the triangle to intersect with the ray.
+/// * `vertices` - A reference to the vertices of the mesh that contains the triangle.
+/// * `epsilon` - A small value used to determine if the ray is parallel to the triangle.
+///
+/// # Returns
+///
+/// * `Option<Intersection>` - The intersection point, if it exists. Otherwise, None.
 fn ray_triangle_intersect(
     ray: &Ray,
     triangle: &Triangle,
@@ -67,6 +83,24 @@ fn ray_triangle_intersect(
     }
 }
 
+/// A triangle in a mesh.
+///
+/// This struct represents a triangle in a mesh.
+/// It contains the indices of the vertices that form the triangle,
+/// as well as the normal and area of the triangle.
+///
+/// # Fields
+///
+/// * `index` - The index of the triangle in the mesh.
+/// * `a` - The index of the first vertex of the triangle.
+/// * `b` - The index of the second vertex of the triangle.
+/// * `c` - The index of the third vertex of the triangle.
+/// * `normal` - The normal of the triangle.
+/// * `area` - The area of the triangle.
+///
+/// # Methods
+///
+/// * `vertices` - Returns the indices of the vertices that form the triangle as a vector.
 #[pyclass]
 #[derive(Clone, Copy)]
 pub struct Triangle {
@@ -86,6 +120,11 @@ pub struct Triangle {
 }
 
 impl Triangle {
+    /// Returns the indices of the vertices that form the triangle as a vector.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<usize>` - The indices of the vertices that form the triangle.
     pub fn vertices(&self) -> Vec<usize> {
         vec![self.a, self.b, self.c]
     }
@@ -104,6 +143,39 @@ impl Index<usize> for Triangle {
     }
 }
 
+/// A mesh.
+///
+/// This struct represents a mesh.
+/// It contains the vertices and triangles that form the mesh,
+/// as well as the origin of the mesh.
+///
+/// # Fields
+///
+/// * `origin` - The origin of the mesh.
+/// * `vertices` - The vertices of the mesh.
+/// * `triangles` - The triangles that form the mesh.
+///
+/// # Methods
+///
+/// * `new` - Creates a new mesh from the origin, vertices, and triangles.
+/// * `load` - Loads a mesh from an STL file.
+/// * `save` - Saves the mesh to an STL file.
+/// * `uniform_sample` - Samples the mesh surface uniformly.
+/// * `recalculate_normals` - Recalculates the normals of the triangles in the mesh.
+/// * `recalculate_areas` - Recalculates the areas of the triangles in the mesh.
+/// * `recalculate_origin` - Recalculates the origin of the mesh.
+/// * `intersect` - Intersects a ray with the mesh.
+/// * `triangles_as_vertex_array` - Returns the triangles of the mesh as a 3D array of vertices.
+/// * `laplacian_smooth` - Smooths the mesh using the Laplacian smoothing algorithm.
+/// * `num_triangles` - Returns the number of triangles in the mesh.
+/// * `num_vertices` - Returns the number of vertices in the mesh.
+/// * `surface_area` - Returns the surface area of the mesh.
+/// * `volume` - Returns the volume of the mesh.
+/// * `bounding_box` - Returns the bounding box of the mesh.
+/// * `get_vertices` - Returns the vertices of the mesh.
+/// * `set_vertices` - Sets the vertices of the mesh.
+/// * `get_triangles` - Returns the triangles of the mesh.
+/// * `set_triangles` - Sets the triangles of the mesh.
 #[pyclass]
 #[derive(Clone)]
 pub struct Mesh {
@@ -116,6 +188,17 @@ pub struct Mesh {
 
 #[pymethods]
 impl Mesh {
+    /// Creates a new mesh from the origin, vertices, and triangles.
+    ///
+    /// # Arguments
+    ///
+    /// * `origin` - The origin of the mesh.
+    /// * `vertices` - The vertices of the mesh.
+    /// * `triangles` - The triangles that form the mesh.
+    ///
+    /// # Returns
+    ///
+    /// * `Mesh` - The new mesh.
     #[new]
     pub fn new(origin: Vec3, vertices: Vec<Vec3>, triangles: Vec<(usize, usize, usize)>) -> Self {
         let mut normals = Vec::with_capacity(triangles.len());
@@ -149,6 +232,18 @@ impl Mesh {
         }
     }
 
+    /// Loads a mesh from an STL file.
+    ///
+    /// This method loads a mesh from an STL file and returns it.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the STL file.
+    /// * `num_samples` - The number of samples to use for the origin calculation.
+    ///
+    /// # Returns
+    ///
+    /// * `Mesh` - The loaded mesh.
     #[staticmethod]
     #[pyo3(signature = (path, num_samples=10_000))]
     pub fn load(path: &str, num_samples: usize) -> Self {
@@ -206,6 +301,17 @@ impl Mesh {
         mesh
     }
 
+    /// Saves the mesh to an STL file.
+    ///
+    /// This method saves the mesh to an STL file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to the STL file.
+    ///
+    /// # Returns
+    ///
+    /// * `None`
     pub fn save(&self, path: &str) {
         let triangles: Vec<stl_io::Triangle> = self
             .triangles
@@ -236,6 +342,17 @@ impl Mesh {
         write_stl(&mut output_file, triangles.iter()).expect("Failed to write STL file");
     }
 
+    /// Samples the mesh surface uniformly.
+    ///
+    /// This method samples the mesh surface uniformly and returns the samples.
+    ///
+    /// # Arguments
+    ///
+    /// * `num_samples` - The number of samples to take.
+    ///
+    /// # Returns
+    ///
+    /// * `Vec<Vec3>` - The samples.
     #[pyo3(signature = (num_samples=1_000_000))]
     pub fn uniform_sample(&self, num_samples: usize) -> Vec<Vec3> {
         let mut rng = thread_rng();

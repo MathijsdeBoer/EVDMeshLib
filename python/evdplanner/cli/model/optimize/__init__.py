@@ -97,6 +97,7 @@ def optimize(
     )
     from evdplanner.network.transforms.defaults import default_load_transforms
     from monai.metrics import MAEMetric, MSEMetric
+    from optuna.integration import PyTorchLightningPruningCallback
 
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
@@ -154,11 +155,21 @@ def optimize(
         )
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
-        with (log_dir / "trial_params.json").open("w") as file:
+        with (log_dir / "trial_params.json").open("w") as model_config_file:
             model.config["batch_size"] = batch_size
-            json.dump(model.config, file, indent=4)
+            json.dump(model.config, model_config_file, indent=4)
 
-        model, test_loss = train_model(model, dm, log_dir, epochs, anatomy, mode="optimize")
+        model, test_loss = train_model(
+            model,
+            dm,
+            log_dir,
+            epochs,
+            anatomy,
+            mode="optimize",
+            additional_callbacks=[
+                PyTorchLightningPruningCallback(trial, monitor=f"hp/{metrics[0].__class__.__name__}"),
+            ]
+        )
         return test_loss[f"hp/{metrics[0].__class__.__name__}"]
 
     pruner = optuna.pruners.MedianPruner(
@@ -175,7 +186,7 @@ def optimize(
     study.optimize(
         _objective,
         n_trials=n_trials,
-        catch=[torch.cuda.OutOfMemoryError, RuntimeError],
+        catch=[torch.cuda.OutOfMemoryError],
         gc_after_trial=True,
     )
 
@@ -188,5 +199,5 @@ def optimize(
     for key, value in best_trial.params.items():
         print(f"    {key:>16}: {value}")
 
-    with (log_dir / "best_trial.json").open("w") as file:
-        json.dump(best_trial.params, file, indent=4)
+    with (log_dir / "best_trial.json").open("w") as trial_file:
+        json.dump(best_trial.params, trial_file, indent=4)

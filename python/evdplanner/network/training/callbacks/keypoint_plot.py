@@ -75,6 +75,9 @@ class KeypointPlotCallback(pl.Callback):
         self._val_batches.append(val_step)
 
     def on_validation_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
+        if trainer.sanity_checking:
+            return
+
         logger = pl_module.logger.experiment
 
         # Aggregate all validation losses

@@ -1,11 +1,11 @@
 import json
 from pathlib import Path
-from typing import List, Mapping, Tuple
+from typing import Mapping
 
 import lightning.pytorch as pl
+
 from evdplanner.network.training.datamodule import EVDPlannerDataModule
 from evdplanner.network.training.lightning_wrapper import LightningWrapper
-from torch import nn
 
 
 def get_data(
@@ -59,9 +59,19 @@ def train_model(
     epochs: int,
     anatomy: str,
     mode="train",
+    additional_callbacks: list[pl.callbacks.Callback] = None,
 ) -> tuple[LightningWrapper, Mapping[str, float]]:
     from evdplanner.network.training.callbacks import KeypointPlotCallback
     from lightning.pytorch import loggers
+
+    callbacks = [
+        pl.callbacks.ModelCheckpoint(monitor="val_loss"),
+        KeypointPlotCallback(
+            filename="keypoint_plot.png",
+            log_image=True,
+            log_loss=True,
+        ),
+    ] + (additional_callbacks or [])
 
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -74,15 +84,7 @@ def train_model(
         ),
         log_every_n_steps=1,
         precision="16-mixed",
-        callbacks=[
-            pl.callbacks.ModelCheckpoint(monitor="val_loss"),
-            pl.callbacks.LearningRateMonitor(logging_interval="step"),
-            KeypointPlotCallback(
-                filename="keypoint_plot.png",
-                log_image=True,
-                log_loss=True,
-            ),
-        ],
+        callbacks=callbacks
     )
 
     trainer.fit(model, datamodule=datamodule)
