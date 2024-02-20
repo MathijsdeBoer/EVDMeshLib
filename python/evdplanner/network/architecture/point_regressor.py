@@ -1,17 +1,35 @@
+"""
+Point regressor model.
+"""
 from math import prod
 from typing import Any, Callable, Sequence
 
 import optuna
 import torch
-import torch.nn as nn
-from evdplanner.network.training import OptimizableModel
 from monai.networks.blocks import ConvDenseBlock, Convolution
 from monai.networks.layers import Act, Flatten, Norm, Reshape, get_act_layer
 from monai.networks.nets import Regressor
+from torch import nn
+
+from evdplanner.network.training import OptimizableModel
 
 
 class ParallelConcat(nn.Module):
+    """
+    Concatenates the outputs of multiple modules in parallel.
+    """
+
     def __init__(self, modules: Sequence[nn.Module], cat_dim: int = 1) -> None:
+        """
+        Initializes the ParallelConcat module.
+
+        Parameters
+        ----------
+        modules : Sequence[nn.Module]
+            The modules to concatenate.
+        cat_dim : int, optional
+            The dimension to concatenate along, by default 1.
+        """
         super().__init__()
         self.cat_dim = cat_dim
 
@@ -19,6 +37,19 @@ class ParallelConcat(nn.Module):
             self.add_module(f"parallel_cat_{idx}", module)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through the module.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            The input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            The concatenated output tensor.
+        """
         outputs = []
         for module in self.children():
             outputs.append(module(x))
@@ -26,6 +57,10 @@ class ParallelConcat(nn.Module):
 
 
 class PointRegressor(Regressor, OptimizableModel):
+    """
+    A point regressor model that predicts keypoints from a set of input maps.
+    """
+
     def __init__(
         self,
         maps: list[str],
@@ -42,6 +77,38 @@ class PointRegressor(Regressor, OptimizableModel):
         dropout: float | None = None,
         bias: bool = True,
     ) -> None:
+        """
+        Initializes the PointRegressor model.
+
+        Parameters
+        ----------
+        maps : list[str]
+            The names of the input maps.
+        keypoints : list[str]
+            The names of the keypoints to predict.
+        in_shape : Sequence[int]
+            The shape of the input tensor.
+        out_shape : Sequence[int]
+            The shape of the output tensor.
+        channels : Sequence[int]
+            The number of channels in each layer.
+        strides : Sequence[int]
+            The stride of each layer.
+        kernel_size : Sequence[int] | int, optional
+            The kernel size of the convolutional layers, by default 3.
+        num_res_units : int, optional
+            The number of residual units in each dense block, by default 2.
+        act : nn.Module | Callable | str, optional
+            The activation function to use, by default Act.PRELU.
+        final_act : nn.Module | Callable | str | None, optional
+            The final activation function to use, by default None.
+        norm : nn.Module | Callable | str, optional
+            The normalization function to use, by default Norm.INSTANCE.
+        dropout : float | None, optional
+            The dropout rate to use, by default None.
+        bias : bool, optional
+            Whether to use bias in the convolutional layers, by default True.
+        """
         super().__init__(
             in_shape=in_shape,
             out_shape=out_shape,
@@ -123,13 +190,41 @@ class PointRegressor(Regressor, OptimizableModel):
         return nn.Sequential(ParallelConcat(point_paths), Reshape(*self.out_shape))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass through the model.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            The input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            The output tensor.
+        """
         x = super().forward(x)
         if self.final_act:
             x = self.final_act(x)
         return x
 
     @classmethod
-    def get_optuna_parameters(cls, optuna_trial: optuna.Trial) -> dict[str, Any]:
+    def get_optuna_parameters(
+        cls: type["PointRegressor"], optuna_trial: optuna.Trial
+    ) -> dict[str, Any]:
+        """
+        Get the parameters for the model from an Optuna trial.
+
+        Parameters
+        ----------
+        optuna_trial : optuna.Trial
+            The Optuna trial to get the parameters from.
+
+        Returns
+        -------
+        dict[str, Any]
+            The parameters for the model.
+        """
         params: dict[str, Any] = {
             "optimizer": optuna_trial.suggest_categorical("optimizer", ["adam", "sgd"]),
             "optimizer_args": {
@@ -214,7 +309,24 @@ class PointRegressor(Regressor, OptimizableModel):
         return params
 
     @classmethod
-    def from_optuna_parameters(cls, parameters: dict[str, any], **kwargs) -> "PointRegressor":
+    def from_optuna_parameters(
+        cls: type["PointRegressor"], parameters: dict[str, any], **kwargs
+    ) -> "PointRegressor":
+        """
+        Create a PointRegressor from Optuna parameters.
+
+        Parameters
+        ----------
+        parameters : dict[str, any]
+            The parameters to use.
+        kwargs : Any
+            Additional keyword arguments.
+
+        Returns
+        -------
+        PointRegressor
+            The PointRegressor model.
+        """
         filters = tuple(
             min(parameters["filters"] * 2**i, parameters["max_filters"])
             for i in range(parameters["num_blocks"])
@@ -240,6 +352,14 @@ class PointRegressor(Regressor, OptimizableModel):
 
     @staticmethod
     def loggable_parameters() -> list[str]:
+        """
+        Get the parameters that can be logged.
+
+        Returns
+        -------
+        list[str]
+            The parameters that can be logged.
+        """
         return [
             "filters",
             "max_filters",
@@ -253,4 +373,12 @@ class PointRegressor(Regressor, OptimizableModel):
 
     @property
     def log_name(self) -> str:
+        """
+        Get the name to use for logging.
+
+        Returns
+        -------
+        str
+            The name to use for logging.
+        """
         return "point_regressor"

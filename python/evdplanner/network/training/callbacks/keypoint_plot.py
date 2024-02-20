@@ -1,3 +1,6 @@
+"""
+Callback to log the loss and a sample image with the predicted keypoints.
+"""
 from pathlib import Path
 
 import lightning.pytorch as pl
@@ -8,7 +11,9 @@ import torch
 
 
 class KeypointPlotCallback(pl.Callback):
-    """Callback that logs the loss and a sample image with the predicted keypoints."""
+    """
+    Callback that logs the loss and a sample image with the predicted keypoints.
+    """
 
     def __init__(
         self,
@@ -17,6 +22,21 @@ class KeypointPlotCallback(pl.Callback):
         log_loss: bool = True,
         log_lr: bool = False,
     ) -> None:
+        """
+        Initialize the callback.
+
+        Parameters
+        ----------
+        filename : str
+            The filename to save the plot to.
+        log_image : bool
+            Whether to log the image or not.
+        log_loss : bool
+            Whether to log the loss or not.
+        log_lr : bool
+            Whether to log the learning rate or not.
+            May only be set to True if log_loss is also True.
+        """
         super().__init__()
 
         if log_lr and not log_loss:
@@ -46,6 +66,26 @@ class KeypointPlotCallback(pl.Callback):
         batch: dict[str, torch.Tensor],
         batch_idx: int,
     ) -> None:
+        """
+        Log the loss and the learning rate at the end of each training batch.
+
+        Parameters
+        ----------
+        trainer : pl.Trainer
+            The trainer object.
+        pl_module : pl.LightningModule
+            The lightning module.
+        outputs : dict[str, torch.Tensor]
+            The outputs of the model.
+        batch : dict[str, torch.Tensor]
+            The current batch.
+        batch_idx : int
+            The index of the current batch.
+
+        Returns
+        -------
+        None
+        """
         train_step = {
             "step": trainer.global_step,
             "epoch": trainer.current_epoch,
@@ -65,6 +105,28 @@ class KeypointPlotCallback(pl.Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
+        """
+        Log the loss and the image at the end of each validation batch.
+
+        Parameters
+        ----------
+        trainer : pl.Trainer
+            The trainer object.
+        pl_module : pl.LightningModule
+            The lightning module.
+        outputs : dict[str, torch.Tensor], optional
+            The outputs of the model.
+        batch : dict[str, torch.Tensor]
+            The current batch.
+        batch_idx : int
+            The index of the current batch.
+        dataloader_idx : int, optional
+            The index of the dataloader.
+
+        Returns
+        -------
+        None
+        """
         if trainer.sanity_checking:
             return
 
@@ -85,6 +147,20 @@ class KeypointPlotCallback(pl.Callback):
         self._val_batches.append(val_step)
 
     def on_validation_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
+        """
+        Log the loss and the image at the end of each validation epoch.
+
+        Parameters
+        ----------
+        trainer : pl.Trainer
+            The trainer object.
+        pl_module : pl.LightningModule
+            The lightning module.
+
+        Returns
+        -------
+        None
+        """
         if trainer.sanity_checking:
             return
 
@@ -179,7 +255,8 @@ class KeypointPlotCallback(pl.Callback):
         image_x = image.shape[1]
         image_y = image.shape[0]
 
-        # Because our image origin is in the upper left corner, but matplotlib's origin is in the lower left corner,
+        # Because our image origin is in the upper left corner, but matplotlib's origin is in
+        # the lower left corner,
         # we have to do some magic to get the coordinates right.
         # invert y coordinates for plotting
         y[:, :, 1] = 1.0 - y[:, :, 1]

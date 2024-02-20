@@ -1,3 +1,6 @@
+"""
+Data module for the EVDPlanner network.
+"""
 import json
 from pathlib import Path
 
@@ -13,6 +16,22 @@ def validate_samples(
     maps: list[str],
     keypoints_key: str,
 ) -> None:
+    """
+    Validate the samples for the EVDPlannerDataModule.
+
+    Parameters
+    ----------
+    samples : list[dict]
+        List of samples.
+    maps : list[str]
+        List of map keys.
+    keypoints_key : str
+        Key for the keypoints.
+
+    Returns
+    -------
+    None
+    """
     for sample in samples:
         if not isinstance(sample, dict):
             msg = "Each sample must be a dictionary."
@@ -57,6 +76,10 @@ def validate_samples(
 
 
 class EVDPlannerDataModule(LightningDataModule):
+    """
+    Data module for the EVDPlanner network.
+    """
+
     def __init__(
         self,
         train_samples: list[dict],
@@ -69,6 +92,30 @@ class EVDPlannerDataModule(LightningDataModule):
         batch_size: int = 1,
         num_workers: int = 0,
     ) -> None:
+        """
+        Initialize the EVDPlannerDataModule.
+
+        Parameters
+        ----------
+        train_samples : list[dict]
+            List of training samples.
+        maps : list[str]
+            List of map keys.
+        keypoints_key : str
+            Key for the keypoints.
+        test_samples : list[dict], optional
+            List of test samples, by default None
+        load_transforms : list[mt.Transform], optional
+            List of transforms to load the data, by default None
+        augment_transforms : list[mt.Transform], optional
+            List of transforms to augment the data, by default None
+        val_split : float, optional
+            Validation split, by default 0.2
+        batch_size : int, optional
+            Batch size, by default 1
+        num_workers : int, optional
+            Number of workers, by default 0
+        """
         validate_samples(train_samples, maps, keypoints_key)
         if test_samples:
             validate_samples(test_samples, maps, keypoints_key)
@@ -91,6 +138,18 @@ class EVDPlannerDataModule(LightningDataModule):
         self.test_data = None
 
     def setup(self, stage: str | None = None) -> None:
+        """
+        Setup the data module.
+
+        Parameters
+        ----------
+        stage : str, optional
+            Stage, by default None
+
+        Returns
+        -------
+        None
+        """
         self.train_data, self.val_data = random_split(
             CacheDataset(
                 self.train_samples,
@@ -105,6 +164,14 @@ class EVDPlannerDataModule(LightningDataModule):
             )
 
     def train_dataloader(self) -> DataLoader:
+        """
+        Train dataloader.
+
+        Returns
+        -------
+        DataLoader
+            Train dataloader.
+        """
         return DataLoader(
             self.train_data,
             batch_size=self.batch_size,
@@ -114,6 +181,14 @@ class EVDPlannerDataModule(LightningDataModule):
         )
 
     def val_dataloader(self) -> DataLoader:
+        """
+        Validation dataloader.
+
+        Returns
+        -------
+        DataLoader
+            Validation dataloader.
+        """
         return DataLoader(
             self.val_data,
             batch_size=1,
@@ -123,6 +198,14 @@ class EVDPlannerDataModule(LightningDataModule):
         )
 
     def test_dataloader(self) -> DataLoader:
+        """
+        Test dataloader.
+
+        Returns
+        -------
+        DataLoader
+            Test dataloader.
+        """
         return DataLoader(
             self.test_data,
             batch_size=1,

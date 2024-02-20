@@ -1,3 +1,7 @@
+"""
+Optimize a point regressor model for a given anatomy using optuna.
+"""
+
 from pathlib import Path
 
 import click
@@ -97,7 +101,39 @@ def optimize(
     resolution: int = 1024,
     num_workers: int = 0,
     verbose: int = 0,
-):
+) -> None:
+    """
+    Optimize a point regressor model for a given anatomy using optuna.
+
+    Parameters
+    ----------
+    anatomy : str
+        Anatomy to train on.
+    train_root : Path
+        Root directory containing training data.
+    log_dir : Path
+        Directory to store logs.
+    n_trials : int
+        Number of trials to run.
+    epochs : int
+        Number of epochs to train.
+    test_root : Path, optional
+        Root directory containing test data.
+    initial_config : Path, optional
+        Path to initial configuration file.
+    seed : int, optional
+        Seed for random number generator.
+    resolution : int
+        Resolution of input images.
+    num_workers : int
+        Number of workers for data loading.
+    verbose : int
+        Increase verbosity. (Use multiple times for more verbosity.)
+
+    Returns
+    -------
+    None
+    """
     import json
     from math import pi
 
@@ -105,6 +141,10 @@ def optimize(
     import lightning.pytorch as pl
     import optuna
     import torch
+    from loguru import logger
+    from monai.metrics import MAEMetric, MSEMetric
+    from optuna.integration import PyTorchLightningPruningCallback
+
     from evdplanner.cli import set_verbosity
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training import train_model
@@ -116,9 +156,6 @@ def optimize(
     )
     from evdplanner.network.training.utils import get_data
     from evdplanner.network.transforms.defaults import default_load_transforms
-    from loguru import logger
-    from monai.metrics import MAEMetric, MSEMetric
-    from optuna.integration import PyTorchLightningPruningCallback
 
     set_verbosity(verbose)
 
@@ -141,6 +178,19 @@ def optimize(
         test_samples = None
 
     def _objective(trial: optuna.Trial) -> float:
+        """
+        Objective function for optuna optimization.
+
+        Parameters
+        ----------
+        trial : optuna.Trial
+            Optuna trial object.
+
+        Returns
+        -------
+        float
+            The trial loss.
+        """
         if seed:
             pl.seed_everything(seed)
 

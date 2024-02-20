@@ -1,3 +1,6 @@
+"""
+A MONAI transform for loading keypoints from a JSON file.
+"""
 import json
 from pathlib import Path
 from typing import Hashable, Mapping
@@ -7,6 +10,10 @@ import torch
 
 
 class JsonKeypointLoaderd(mt.MapTransform):
+    """
+    Load keypoints from a JSON file and store them in a tensor.
+    """
+
     def __init__(
         self,
         json_key: str,
@@ -14,12 +21,41 @@ class JsonKeypointLoaderd(mt.MapTransform):
         keypoint_names: list[str] | None = None,
         allow_missing_keys: bool = False,
     ) -> None:
+        """
+        Initialize the transform.
+
+        Parameters
+        ----------
+        json_key : str
+            The key in the input dictionary that contains the path to the JSON file.
+        output_key : str
+            The key in the output dictionary to store the keypoints.
+        keypoint_names : list[str], optional
+            A list of keypoint names to extract from the JSON file. If None, all keypoints
+            are extracted.
+        allow_missing_keys : bool, optional
+            If False, raise an exception if the input dictionary is missing the json_key.
+            If True, do not raise an exception.
+        """
         super().__init__(keys=[json_key], allow_missing_keys=allow_missing_keys)
         self.json_key = json_key
         self.output_key = output_key
         self.keypoint_names = keypoint_names
 
     def __call__(self, data: Mapping[Hashable, Path]) -> dict[Hashable, torch.Tensor]:
+        """
+        Load keypoints from a JSON file and store them in a tensor.
+
+        Parameters
+        ----------
+        data : Mapping[Hashable, Path]
+            The input dictionary.
+
+        Returns
+        -------
+        dict[Hashable, torch.Tensor]
+            The output dictionary.
+        """
         d = dict(data)
 
         for key in self.key_iterator(d):

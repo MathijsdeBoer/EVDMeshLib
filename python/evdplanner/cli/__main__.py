@@ -1,7 +1,17 @@
+"""
+The entry point for the CLI.
+"""
 from evdplanner.cli import cli
 
 
-def main():
+def main() -> None:
+    """
+    Main function for the CLI.
+
+    Returns
+    -------
+    None
+    """
     cli()
 
 

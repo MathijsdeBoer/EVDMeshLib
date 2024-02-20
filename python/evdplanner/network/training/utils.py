@@ -1,19 +1,36 @@
+"""
+Utility functions for the network.
+"""
 import json
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import torch
+from monai.metrics import MAEMetric, MSEMetric
+from torch import Tensor, nn, optim
+
 from evdplanner.network.training.losses import (
     MeanAbsoluteAngularError,
     MeanSquaredAngularError,
 )
-from monai.metrics import MAEMetric, MSEMetric
-from torch import Tensor, nn, optim
 
 
 def get_loss_fn(
     loss: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
-) -> Callable[[Tensor, Tensor], Tensor]:
+) -> nn.Module | Callable[[Tensor, Tensor], Tensor]:
+    """
+    Get the loss function.
+
+    Parameters
+    ----------
+    loss : nn.Module | Callable[[Tensor, Tensor], Tensor] | str
+        The loss function.
+
+    Returns
+    -------
+    nn.Module | Callable[[Tensor, Tensor], Tensor]
+        The loss function.
+    """
     if isinstance(loss, str):
         match loss.lower():
             case "mae":
@@ -33,7 +50,20 @@ def get_loss_fn(
 
 def get_metric_fn(
     metric: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
-) -> Callable[[Tensor, Tensor], Tensor]:
+) -> nn.Module | Callable[[Tensor, Tensor], Tensor]:
+    """
+    Get the metric function.
+
+    Parameters
+    ----------
+    metric : nn.Module | Callable[[Tensor, Tensor], Tensor] | str
+        The metric function.
+
+    Returns
+    -------
+    nn.Module | Callable[[Tensor, Tensor], Tensor]
+        The metric function.
+    """
     if isinstance(metric, str):
         match metric.lower():
             case "mae":
@@ -56,6 +86,23 @@ def get_optimizer(
     params: Iterable[Tensor] | Iterable[dict[str, Any]],
     **kwargs: dict[str, Any],
 ) -> torch.optim.Optimizer:
+    """
+    Get the optimizer.
+
+    Parameters
+    ----------
+    optimizer : optim.Optimizer | str
+        The optimizer.
+    params : Iterable[Tensor] | Iterable[dict[str, Any]]
+        The parameters to optimize.
+    kwargs : dict[str, Any]
+        Additional keyword arguments for the optimizer.
+
+    Returns
+    -------
+    torch.optim.Optimizer
+        The optimizer.
+    """
     if isinstance(optimizer, str):
         match optimizer.lower():
             case "adam":
@@ -72,8 +119,25 @@ def get_optimizer(
 def get_lr_scheduler(
     lr_scheduler: optim.lr_scheduler.LRScheduler | str | None,
     optimizer: optim.Optimizer,
-    **kwargs,
+    **kwargs: Any,
 ) -> optim.lr_scheduler.LRScheduler | None:
+    """
+    Get the learning rate scheduler.
+
+    Parameters
+    ----------
+    lr_scheduler : optim.lr_scheduler.LRScheduler | str | None
+        The learning rate scheduler.
+    optimizer : optim.Optimizer
+        The optimizer.
+    kwargs : dict[str, Any]
+        Additional keyword arguments for the learning rate scheduler.
+
+    Returns
+    -------
+    optim.lr_scheduler.LRScheduler | None
+        The learning rate scheduler.
+    """
     if lr_scheduler is None:
         return None
 
@@ -104,6 +168,29 @@ def get_data(
     output_image_keys: tuple[str] = ("map_{anatomy}_depth", "map_{anatomy}_normal"),
     output_label_key: str = "keypoints",
 ) -> tuple[list[dict[str, Path]], list[str], list[str]]:
+    """
+    Get the data.
+
+    Parameters
+    ----------
+    root : Path
+        The root directory.
+    anatomy : str
+        The anatomy.
+    image_files : tuple[str], optional
+        The image files, by default ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png")
+    label_file : str, optional
+        The label file, by default "projected_{anatomy}.kp.json"
+    output_image_keys : tuple[str], optional
+        The output image keys, by default ("map_{anatomy}_depth", "map_{anatomy}_normal")
+    output_label_key : str, optional
+        The output label key, by default "keypoints"
+
+    Returns
+    -------
+    tuple[list[dict[str, Path]], list[str], list[str]]
+        The data, the maps, and the keypoints.
+    """
     data = []
 
     if not len(image_files) == len(output_image_keys):
@@ -132,7 +219,8 @@ def get_data(
             keypoints = [x["label"] for x in keypoints]
 
         sample_dict = {
-            key.format(anatomy=anatomy): file for key, file in zip(output_image_keys, images)
+            key.format(anatomy=anatomy): file
+            for key, file in zip(output_image_keys, images, strict=True)
         }
         sample_dict[output_label_key] = label
         data.append(sample_dict)

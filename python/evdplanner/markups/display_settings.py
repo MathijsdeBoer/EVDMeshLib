@@ -1,8 +1,16 @@
+"""
+The DisplaySettings class, which is used to store the display settings for a 3D Slicer model node.
+"""
+
 from dataclasses import dataclass, field
 
 
 @dataclass
 class DisplaySettings:
+    """
+    Class to store the display settings for a 3D Slicer model node.
+    """
+
     color: tuple[float, float, float]
     selected_color: tuple[float, float, float]
     active_color: tuple[float, float, float]
@@ -44,6 +52,18 @@ class DisplaySettings:
         selected_color: tuple[float, float, float],
         active_color: tuple[float, float, float],
     ) -> None:
+        """
+        Initialize the DisplaySettings object.
+
+        Parameters
+        ----------
+        color : tuple[float, float, float]
+            The color of the markups.
+        selected_color : tuple[float, float, float]
+            The color of the markups when selected.
+        active_color : tuple[float, float, float]
+            The color of the markups when active.
+        """
         super().__init__()
         self.color = color
         self.selected_color = selected_color
@@ -52,7 +72,15 @@ class DisplaySettings:
         self.slice_projection_color = self.color
 
     @classmethod
-    def default(cls) -> "DisplaySettings":
+    def default(cls: type["DisplaySettings"]) -> "DisplaySettings":
+        """
+        Create a DisplaySettings object with default settings.
+
+        Returns
+        -------
+        DisplaySettings
+            The default display settings.
+        """
         return cls(
             color=(1, 0, 0),
             selected_color=(0, 1, 0),
@@ -61,6 +89,19 @@ class DisplaySettings:
 
     @staticmethod
     def from_dict(data: dict) -> "DisplaySettings":
+        """
+        Create a DisplaySettings object from a dictionary.
+
+        Parameters
+        ----------
+        data : dict
+            The dictionary containing the display settings.
+
+        Returns
+        -------
+        DisplaySettings
+            The display settings.
+        """
         settings = DisplaySettings(
             color=data["color"],
             selected_color=data["selectedColor"],
@@ -94,7 +135,15 @@ class DisplaySettings:
         settings.snap_mode = data["snapMode"]
         return settings
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """
+        Convert the DisplaySettings object to a dictionary.
+
+        Returns
+        -------
+        dict
+            The dictionary containing the display settings.
+        """
         return {
             "visibility": self.visibility,
             "opacity": self.opacity,

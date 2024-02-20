@@ -1,3 +1,6 @@
+"""
+Plot keypoints on an image.
+"""
 import json
 from pathlib import Path
 
@@ -13,12 +16,31 @@ import click
 )
 @click.argument("output", type=click.Path(dir_okay=False, resolve_path=True, path_type=Path))
 @click.option("-v", "--verbose", count=True, help="Verbosity level (repeat for more)")
-def keypoints(image: Path, keypoints: Path, output: Path, verbose: int = 0):
+def keypoints(image: Path, keypoints: Path, output: Path, verbose: int = 0) -> None:
+    """
+    Plot keypoints on an image.
+
+    Parameters
+    ----------
+    image : Path
+        Path to the image file.
+    keypoints : Path
+        Path to the keypoints file.
+    output : Path
+        Path to the output file.
+    verbose : int
+        Verbosity level.
+
+    Returns
+    -------
+    None
+    """
     import matplotlib.pyplot as plt
     import seaborn as sns
-    from evdplanner.cli import set_verbosity
     from imageio.v3 import imread
     from loguru import logger
+
+    from evdplanner.cli import set_verbosity
 
     set_verbosity(verbose)
 

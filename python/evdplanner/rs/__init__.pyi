@@ -1,3 +1,6 @@
+"""
+Rust core bindings.
+"""
 from .geometry import Mesh
 from .linalg import Vec3
 from .rendering import (

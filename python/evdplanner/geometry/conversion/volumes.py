@@ -1,16 +1,44 @@
+"""
+Functions for converting volumes to meshes.
+"""
+
 import mcubes
 import numpy as np
+
 from evdplanner.geometry import Mesh
 from evdplanner.linalg import Vec3
 
 
 def volume_to_mesh(
     volume: np.ndarray,
-    origin: Vec3 | tuple[float, float, float] = Vec3.zero(),
-    spacing: Vec3 | tuple[float, float, float] = Vec3.one(),
+    origin: Vec3 | tuple[float, float, float] | None = None,
+    spacing: Vec3 | tuple[float, float, float] | None = None,
     num_samples: int = 1_000_000,
 ) -> Mesh:
-    """Convert a volume to a mesh."""
+    """
+    Convert a volume to a mesh.
+
+    Parameters
+    ----------
+    volume : np.ndarray
+        The volume to convert to a mesh.
+    origin : Vec3 or tuple
+        The origin of the volume.
+    spacing : Vec3 or tuple
+        The spacing of the volume.
+    num_samples : int
+        The number of samples to use when recalculating the origin of the mesh.
+
+    Returns
+    -------
+    Mesh
+        The mesh generated from the volume.
+    """
+    if origin is None:
+        origin = Vec3.zero()
+    if spacing is None:
+        spacing = Vec3.one()
+
     if isinstance(origin, tuple):
         origin = Vec3(*origin)
     if isinstance(spacing, tuple):

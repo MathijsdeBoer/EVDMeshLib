@@ -1,19 +1,30 @@
+"""
+The LightningWrapper class, which is a wrapper around a PyTorch model.
+"""
 from typing import Callable
 
 import lightning.pytorch as pl
 import optuna
 import torch
+from torch import Tensor, nn
+
 from evdplanner.network.training.optimizable_model import OptimizableModel
 from evdplanner.network.training.utils import (
     get_loss_fn,
     get_lr_scheduler,
     get_optimizer,
 )
-from torch import Tensor, nn
 
 
 class LightningWrapper(pl.LightningModule):
+    """
+    A wrapper around a PyTorch model that is compatible with PyTorch Lightning.
+    """
+
     def __init__(self) -> None:
+        """
+        Initializes the LightningWrapper.
+        """
         super().__init__()
 
         self.model = None
@@ -26,6 +37,18 @@ class LightningWrapper(pl.LightningModule):
         self.loggable_hparams = []
 
     def set_input_shape(self, shape: tuple[int, ...]) -> None:
+        """
+        Sets the input shape of the model.
+
+        Parameters
+        ----------
+        shape : tuple[int, ...]
+            The input shape of the model.
+
+        Returns
+        -------
+        None
+        """
         self.example_input_array = torch.rand(shape)
 
     @staticmethod
@@ -33,10 +56,33 @@ class LightningWrapper(pl.LightningModule):
         model: nn.Module,
         loss: nn.Module | Callable[[Tensor, Tensor], Tensor],
         optimizer: torch.optim.Optimizer,
-        config: dict[str, any] | None,
+        config: dict[str, any] | None = None,
         scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
         metrics: list[nn.Module | Callable[[Tensor, Tensor], Tensor]] | None = None,
     ) -> "LightningWrapper":
+        """
+        Builds a LightningWrapper from the given parameters.
+
+        Parameters
+        ----------
+        model : nn.Module
+            The model to wrap.
+        loss : nn.Module | Callable[[Tensor, Tensor], Tensor]
+            The loss function to use.
+        optimizer : torch.optim.Optimizer
+            The optimizer to use.
+        config : dict[str, any], optional
+            The configuration of the model.
+        scheduler : torch.optim.lr_scheduler.LRScheduler, optional
+            The learning rate scheduler to use.
+        metrics : list[nn.Module | Callable[[Tensor, Tensor], Tensor]], optional
+            The metrics to use.
+
+        Returns
+        -------
+        LightningWrapper
+            The built LightningWrapper.
+        """
         wrapper = LightningWrapper()
         wrapper.model = model
         wrapper.loss = loss
@@ -48,12 +94,31 @@ class LightningWrapper(pl.LightningModule):
 
     @classmethod
     def from_optuna_parameters(
-        cls,
+        cls: type["LightningWrapper"],
         model: type[OptimizableModel],
         trial: optuna.Trial,
         metrics: list[nn.Module | Callable[[Tensor, Tensor], Tensor]] | None = None,
         **kwargs,
     ) -> "LightningWrapper":
+        """
+        Builds a LightningWrapper from the given Optuna trial and model.
+
+        Parameters
+        ----------
+        model : type[OptimizableModel]
+            The model to build the wrapper for.
+        trial : optuna.Trial
+            The trial to get the parameters from.
+        metrics : list[nn.Module | Callable[[Tensor, Tensor], Tensor]], optional
+            The metrics to use.
+        kwargs : any
+            Additional keyword arguments to pass to the model.
+
+        Returns
+        -------
+        LightningWrapper
+            The built LightningWrapper.
+        """
         config = model.get_optuna_parameters(trial)
         loggable_params = model.loggable_parameters()
         model = model.from_optuna_parameters(config, **kwargs)
@@ -82,11 +147,32 @@ class LightningWrapper(pl.LightningModule):
         return wrapper
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Forwards the input through the model.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            The input to forward through the model.
+
+        Returns
+        -------
+        torch.Tensor
+            The output of the model.
+        """
         return self.model(x)
 
     def configure_optimizers(
         self,
     ) -> dict[str, torch.optim.Optimizer | torch.optim.lr_scheduler.LRScheduler | str]:
+        """
+        Configures the optimizers and learning rate schedulers to use.
+
+        Returns
+        -------
+        dict[str, torch.optim.Optimizer | torch.optim.lr_scheduler.LRScheduler | str]
+            The optimizers and learning rate schedulers to use.
+        """
         if self.scheduler is None:
             return {"optimizer": self.optimizer}
         else:
@@ -96,6 +182,13 @@ class LightningWrapper(pl.LightningModule):
             }
 
     def on_train_start(self) -> None:
+        """
+        Called when the training starts.
+
+        Returns
+        -------
+        None
+        """
         params = {}
 
         params["model"] = {}
@@ -126,6 +219,21 @@ class LightningWrapper(pl.LightningModule):
         )
 
     def training_step(self, batch: dict[str, Tensor], batch_idx: int) -> dict[str, Tensor]:
+        """
+        Performs a training step.
+
+        Parameters
+        ----------
+        batch : dict[str, Tensor]
+            The batch to train on.
+        batch_idx : int
+            The index of the batch.
+
+        Returns
+        -------
+        dict[str, Tensor]
+            The output of the training step.
+        """
         x, y = batch["image"], batch["label"]
         y_hat = self(x)
         loss = self.loss(y_hat, y)
@@ -148,6 +256,21 @@ class LightningWrapper(pl.LightningModule):
         return output
 
     def validation_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> dict[str, Tensor]:
+        """
+        Performs a validation step.
+
+        Parameters
+        ----------
+        batch : dict[str, torch.Tensor]
+            The batch to validate on.
+        batch_idx : int
+            The index of the batch.
+
+        Returns
+        -------
+        dict[str, Tensor]
+            The output of the validation step.
+        """
         x, y = batch["image"], batch["label"]
         y_hat = self(x)
         loss = self.loss(y_hat, y)
@@ -169,6 +292,21 @@ class LightningWrapper(pl.LightningModule):
         return output
 
     def test_step(self, batch: dict[str, torch.Tensor], batch_idx: int) -> dict[str, Tensor]:
+        """
+        Performs a test step.
+
+        Parameters
+        ----------
+        batch : dict[str, torch.Tensor]
+            The batch to test on.
+        batch_idx : int
+            The index of the batch.
+
+        Returns
+        -------
+        dict[str, Tensor]
+            The output of the test step.
+        """
         x, y = batch["image"], batch["label"]
         y_hat = self(x)
         loss = self.loss(y_hat, y)
@@ -188,4 +326,12 @@ class LightningWrapper(pl.LightningModule):
 
     @property
     def log_name(self) -> str:
+        """
+        Returns the name of the model.
+
+        Returns
+        -------
+        str
+            The name of the model.
+        """
         return self.model.log_name

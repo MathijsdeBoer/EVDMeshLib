@@ -1,18 +1,36 @@
+"""
+The GPURenderer class, which is a GPU-accelerated implementation of the CPURenderer class.
+"""
 import numpy as np
 import taichi as ti
 import taichi.math as tm
+from loguru import logger
+
 from evdplanner.geometry import Mesh
 from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
-from loguru import logger
 
 
 @ti.data_oriented
 class GPURenderer(CPURenderer):
+    """
+    A GPU-accelerated implementation of the CPURenderer class.
+    """
+
     def __init__(
         self,
         camera: Camera,
         mesh: Mesh,
     ) -> None:
+        """
+        Initialize the GPURenderer.
+
+        Parameters
+        ----------
+        camera : Camera
+            The camera to use for rendering
+        mesh : Mesh
+            The mesh to render
+        """
         super().__init__()
 
         self.camera = camera
@@ -22,6 +40,21 @@ class GPURenderer(CPURenderer):
         self.y_resolution = self.camera.y_resolution
 
     def render(self, intersection_mode: IntersectionSort, epsilon: float = 1e-8) -> np.ndarray:
+        """
+        Render the scene using the given intersection mode and epsilon value.
+
+        Parameters
+        ----------
+        intersection_mode : IntersectionSort
+            The intersection mode to use
+        epsilon : float
+            The epsilon value to use for floating point comparisons
+
+        Returns
+        -------
+        np.ndarray
+            An array of pixels
+        """
         ti.init(arch=ti.gpu, default_fp=ti.f64, kernel_profiler=True, enable_fallback=False)
 
         logger.debug(f"Initializing pixel field with {self.x_resolution=}, {self.y_resolution=}")
@@ -38,29 +71,60 @@ class GPURenderer(CPURenderer):
         logger.debug(f"Initializing camera origin with {self.camera.origin=}")
         camera_origin = ti.Vector(self.camera.origin.as_float_list())
 
-        logger.debug(f"Generating triangles from mesh")
+        logger.debug("Generating triangles from mesh")
         tris = self.mesh.triangles_as_vertex_array()
         triangles = ti.Vector.field(3, dtype=ti.f64, shape=tris.shape[:-1])
         triangles.from_numpy(tris)
         logger.debug(f"{triangles.shape=}")
 
-        logger.debug(f"Generating normals from mesh")
+        logger.debug("Generating normals from mesh")
         norms = [x.normal.as_float_list() for x in self.mesh.triangles]
         normals = ti.Vector.field(3, dtype=ti.f64, shape=(len(norms)))
         normals.from_numpy(np.array(norms))
 
         @ti.func
-        def spherical_to_cartesian(rho, theta, phi):
+        def spherical_to_cartesian(rho: float, theta: float, phi: float) -> ti.Vector:
+            """
+            Convert spherical coordinates to cartesian coordinates.
+
+            Parameters
+            ----------
+            rho : float
+                The radius
+            theta : float
+                The azimuthal angle
+            phi : float
+                The polar angle
+
+            Returns
+            -------
+            ti.Vector
+                The cartesian coordinates
+            """
             x = rho * tm.cos(theta) * tm.sin(phi)
             y = rho * tm.sin(theta) * tm.sin(phi)
             z = rho * tm.cos(phi)
             return ti.Vector([x, y, z])
 
-        def generate_ray_directions():
+        def generate_ray_directions() -> None:
+            """
+            Generate the ray directions for the given camera.
+
+            Returns
+            -------
+            None
+            """
             if self.camera.camera_type == CameraType.Equirectangular:
 
                 @ti.kernel
-                def generate_ray_directions_kernel():
+                def generate_ray_directions_kernel() -> None:
+                    """
+                    Generate the ray directions for the equirectangular camera.
+
+                    Returns
+                    -------
+                    None
+                    """
                     for pix_y, pix_x in pixels:
                         theta = (
                             2.0 * tm.pi * (pix_x / self.x_resolution) + self.camera.theta_offset
@@ -87,13 +151,37 @@ class GPURenderer(CPURenderer):
 
         @ti.func
         def ray_triangle_intersect(
-            ray_origin,
-            ray_dir,
-            a,
-            b,
-            c,
-            normal,
+            ray_origin: ti.Vector,
+            ray_dir: ti.Vector,
+            a: ti.Vector,
+            b: ti.Vector,
+            c: ti.Vector,
+            normal: ti.Vector,
         ) -> tuple[bool, float]:
+            """
+            Check if a ray intersects a triangle.
+
+            Parameters
+            ----------
+            ray_origin : ti.Vector
+                The origin of the ray
+            ray_dir : ti.Vector
+                The direction of the ray
+            a : ti.Vector
+                The first vertex of the triangle
+            b : ti.Vector
+                The second vertex of the triangle
+            c : ti.Vector
+                The third vertex of the triangle
+            normal : ti.Vector
+                The normal of the triangle
+
+            Returns
+            -------
+            tuple[bool, float]
+                A tuple containing a boolean indicating whether the ray intersects the triangle and
+                the distance to the intersection point
+            """
             intersect = False
             t = -1.0
 
@@ -124,7 +212,14 @@ class GPURenderer(CPURenderer):
             return intersect, t
 
         @ti.kernel
-        def flatten_mesh_kernel():
+        def flatten_mesh_kernel() -> None:
+            """
+            Flatten the mesh into a 2D array.
+
+            Returns
+            -------
+            None
+            """
             ti.loop_config(
                 block_dim=128,
             )

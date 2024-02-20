@@ -34,5 +34,4 @@ RUN apt-get update \
     && ldconfig -p | grep libcuda
 
 COPY . /evdplanner
-RUN pip install /evdplanner \
-    && rm -rf /evdplanner
+RUN pip install /evdplanner

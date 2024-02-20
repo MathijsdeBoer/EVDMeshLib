@@ -50,15 +50,17 @@ target-version = ["py311"]
 
 [tool.isort]
 profile = "black"
+src_paths = ["python"]
 
 [tool.ruff]
 select = ["E", "F", "B", "I", "N", "D", "S", "W", "C4", "EM", "PL", "PTH", "ANN"]
-ignore = ["D203", "D212", "D401", "ANN101"]
-target-version = "py310"
+ignore = ["D105", "D200", "D203", "D212", "D401", "ANN101"]
+target-version = "py311"
 exclude = [
     "tests",
 ]
 line-length = 99
+src = ["python"]
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
@@ -69,3 +71,6 @@ max-complexity = 10
 [tool.ruff.pylint]
 max-args = 10
 max-returns = 5
+
+[tool.ruff.pydocstyle]
+convention = "numpy"

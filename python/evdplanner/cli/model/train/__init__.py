@@ -1,3 +1,7 @@
+"""
+Train a model to predict the keypoint locations for a given anatomy.
+"""
+
 from math import pi
 from pathlib import Path
 
@@ -101,10 +105,45 @@ def train(
     num_workers: int = 0,
     verbose: int = 0,
 ) -> None:
+    """
+    Train a model to predict the keypoint locations for a given anatomy.
+
+    Parameters
+    ----------
+    anatomy : str
+        Anatomy to train on.
+    train_root : Path
+        Root directory containing training data.
+    config : Path
+        Path to JSON configuration file.
+    log_dir : Path
+        Directory to store logs.
+    model_path : Path
+        Path to store trained model.
+    epochs : int
+        Number of epochs to train.
+    test_root : Path, optional
+        Root directory containing test data.
+    seed : int, optional
+        Random seed for reproducibility.
+    resolution : int, optional
+        Resolution of input images.
+    num_workers : int, optional
+        Number of workers for data loading.
+    verbose : int, optional
+        Increase verbosity. (Use multiple times for more verbosity.)
+
+    Returns
+    -------
+    None
+    """
     import json
 
     import lightning.pytorch as pl
     import torch
+    from loguru import logger
+    from monai.metrics import MAEMetric, MSEMetric
+
     from evdplanner.cli import set_verbosity
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training import train_model
@@ -122,8 +161,6 @@ def train(
         get_optimizer,
     )
     from evdplanner.network.transforms.defaults import default_load_transforms
-    from loguru import logger
-    from monai.metrics import MAEMetric, MSEMetric
 
     set_verbosity(verbose)
     logger.info(f"Training model for {anatomy}.")
@@ -154,7 +191,7 @@ def train(
         logger.info(f"Loading configuration from {config}.")
         config = json.load(file)
 
-        logger.debug(f"Configuration:")
+        logger.debug("Configuration:")
         logger.debug(json.dumps(config, indent=4))
 
         dm = EVDPlannerDataModule(

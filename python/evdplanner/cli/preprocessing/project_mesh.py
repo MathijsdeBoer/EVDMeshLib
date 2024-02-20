@@ -1,3 +1,6 @@
+"""
+Project a mesh to a map.
+"""
 from math import pi
 from pathlib import Path
 
@@ -68,8 +71,35 @@ def project_mesh(
     verbose: int,
     keypoints_file: Path = None,
     strict: bool = False,
-):
+) -> None:
+    """
+    Project a mesh to a map.
+
+    Parameters
+    ----------
+    ctx : click.Context
+        The click context.
+    mesh : Path
+        The path to the mesh file.
+    output : Path
+        The path to the output directory.
+    resolution : int
+        The resolution of the output image.
+    gpu : bool
+        Whether to use GPU rendering or not.
+    verbose : int
+        The verbosity level.
+    keypoints_file : Path, optional
+        The path to the keypoints file.
+    strict : bool
+        Whether to use strict mode or not.
+
+    Returns
+    -------
+    None
+    """
     import numpy as np
+
     from evdplanner.cli import set_verbosity
     from evdplanner.geometry import Mesh
 
@@ -95,21 +125,23 @@ def project_mesh(
 def equirectangular(
     ctx: click.Context,
     theta_offset: float = 0.5 * pi,
-):
+) -> None:
     """Project mesh to equirectangular map."""
     import json
     from time import time
 
     import numpy as np
+    from imageio import imwrite
+    from loguru import logger
+
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager, MarkupTypes
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
-    from imageio import imwrite
-    from loguru import logger
 
     logger.info(
-        f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces"
+        f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and "
+        f"{ctx.obj['mesh'].num_triangles} faces"
     )
     logger.debug(f"Mesh origin: {ctx.obj['mesh'].origin}")
     logger.debug(f"Theta offset: {theta_offset}")

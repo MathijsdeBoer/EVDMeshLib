@@ -1,3 +1,6 @@
+"""
+Rendering module for the evdplanner package.
+"""
 from evdplanner.rs.rendering import (
     Camera,
     CameraType,

@@ -1,3 +1,7 @@
+"""
+Default transforms for loading and preprocessing data.
+"""
+
 import monai.transforms as mt
 import torch
 
@@ -11,6 +15,27 @@ def default_load_transforms(
     image_key: str = "image",
     label_key: str = "label",
 ) -> list[mt.Transform]:
+    """
+    Default transforms for loading and preprocessing data.
+
+    Parameters
+    ----------
+    maps : list[str]
+        The list of keys for the input maps.
+    keypoints : list[str], optional
+        The list of keys for the keypoints.
+    json_key : str, optional
+        The key for the JSON file containing the keypoints.
+    image_key : str, optional
+        The key for the image.
+    label_key : str, optional
+        The key for the label.
+
+    Returns
+    -------
+    list[mt.Transform]
+        The list of transforms.
+    """
     return [
         mt.LoadImaged(keys=maps),
         mt.EnsureTyped(keys=maps, dtype=torch.float32),

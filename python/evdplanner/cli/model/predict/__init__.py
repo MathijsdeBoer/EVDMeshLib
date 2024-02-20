@@ -1,3 +1,6 @@
+"""
+Prediction CLI commands for the CLI.
+"""
 from pathlib import Path
 
 import click
@@ -11,8 +14,31 @@ def predict_skin_mesh(
     gpu_renderer: bool = False,
     gpu_model: bool = False,
     verbose: bool = False,
-):
+) -> None:
+    """
+    Predict skin mesh.
+
+    Parameters
+    ----------
+    model_path : Path
+        Path to the model file.
+    mesh : Path
+        Path to the mesh file.
+    output_path : Path
+        Path to the output file.
+    gpu_renderer : bool, optional
+        Whether to use GPU rendering or not.
+    gpu_model : bool, optional
+        Whether to use GPU model or not.
+    verbose : bool, optional
+        Verbosity level.
+
+    Returns
+    -------
+    None
+    """
     import torch
+
     from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
     from evdplanner.network import PointRegressor
