@@ -1,15 +1,10 @@
-import json
+import logging
 from math import pi
 from pathlib import Path
-from time import time
 
 import click
-import numpy as np
-from evdplanner.markups.markup import MarkupTypes
-from evdplanner.markups.markup_manager import MarkupManager
-from evdplanner.rendering.utils import normalize_image
-from evdplanner.rs import Camera, CameraType, IntersectionSort, Mesh, Vec3
-from imageio import imwrite
+
+from evdplanner.cli import set_verbosity
 
 
 @click.group(name="project")
@@ -47,10 +42,8 @@ from imageio import imwrite
 @click.option(
     "-v",
     "--verbose",
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="Print progress.",
+    count=True,
+    help="Increase verbosity (can be specified multiple times)",
 )
 @click.option(
     "-k",
@@ -75,11 +68,16 @@ def project_mesh(
     output: Path,
     resolution: int,
     gpu: bool,
-    verbose: bool,
+    verbose: int,
     keypoints_file: Path = None,
     strict: bool = False,
 ):
+    import numpy as np
+
+    from evdplanner.geometry import Mesh
+
     np.seterr(all="raise")
+    set_verbosity(verbose)
 
     if ctx.obj is None:
         ctx.obj = {}
@@ -102,15 +100,25 @@ def equirectangular(
     theta_offset: float = 0.5 * pi,
 ):
     """Project mesh to equirectangular map."""
-    if ctx.obj["verbose"]:
-        print(
-            f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces"
-        )
-        print(f"Mesh origin: {ctx.obj['mesh'].origin}")
-        print(f"Theta offset: {theta_offset}")
-        print(f"Output resolution: {ctx.obj['resolution']}x{ctx.obj['resolution'] // 2}")
-        print("Initializing camera...")
+    import json
+    from time import time
 
+    import numpy as np
+
+    from evdplanner.markups import MarkupManager, MarkupTypes
+    from evdplanner.linalg import Vec3
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort
+    from evdplanner.rendering.utils import normalize_image
+    from imageio import imwrite
+
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces")
+    logger.debug(f"Mesh origin: {ctx.obj['mesh'].origin}")
+    logger.debug(f"Theta offset: {theta_offset}")
+    logger.debug(f"Output resolution: {ctx.obj['resolution']}x{ctx.obj['resolution'] // 2}")
+
+    logger.info("Initializing camera...")
     camera = Camera(
         ctx.obj["mesh"].origin,
         forward=Vec3(0, -1, 0),
@@ -123,9 +131,7 @@ def equirectangular(
     if ctx.obj["gpu"]:
         from evdplanner.rendering.gpu import GPURenderer
 
-        if ctx.obj["verbose"]:
-            print("Using GPU renderer")
-
+        logger.info("Using GPU renderer")
         renderer = GPURenderer(
             camera,
             mesh=ctx.obj["mesh"],
@@ -133,75 +139,91 @@ def equirectangular(
     else:
         from evdplanner.rendering.cpu import CPURenderer
 
-        if ctx.obj["verbose"]:
-            print("Using CPU renderer")
-
+        logger.info("Using CPU renderer")
         renderer = CPURenderer(
             camera,
             mesh=ctx.obj["mesh"],
         )
 
-    if ctx.obj["verbose"]:
-        print("Rendering...")
-        start = time()
-
+    logger.info("Rendering...")
+    start = time()
     render = renderer.render(
         intersection_mode=IntersectionSort.Farthest,
     )
+    logger.info(f"Rendering took {time() - start:.2f} seconds")
 
-    if ctx.obj["verbose"]:
-        print(f"Rendering took {time() - start:.2f}s")
-        print("Saving...")
-
+    logger.info("Normalizing images...")
     depth_image = render[..., 0]
     normal_image = render[..., 1:]
 
+    logger.debug(f"Depth image: {depth_image.shape} {depth_image.dtype}")
+    logger.debug(f"Normal image: {normal_image.shape} {normal_image.dtype}")
+
+    logger.debug(f"Depth image min: {depth_image.min()}")
+    logger.debug(f"Depth image max: {depth_image.max()}")
+    logger.debug(f"Normal image min: {normal_image.min()}")
+    logger.debug(f"Normal image max: {normal_image.max()}")
+
+    logger.debug("Normalizing images...")
     depth_image = normalize_image(depth_image)
     normal_image += 1.0
     normal_image /= 2.0
 
+    logger.debug(f"Depth image min: {depth_image.min()}")
+    logger.debug(f"Depth image max: {depth_image.max()}")
+    logger.debug(f"Normal image min: {normal_image.min()}")
+    logger.debug(f"Normal image max: {normal_image.max()}")
+
+    logger.debug("Converting images to uint16 and uint8...")
     depth_image = (depth_image * 65535).astype(np.uint16)
     normal_image = (normal_image * 255).astype(np.uint8)
 
     depth_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_depth.png"
     normal_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_normal.png"
 
+    logger.info(f"Saving to {depth_output}")
     imwrite(depth_output, depth_image)
+
+    logger.info(f"Saving to {normal_output}")
     imwrite(normal_output, normal_image)
 
-    if ctx.obj["verbose"]:
-        print(f"Saved to {depth_output}")
-        print(f"Saved to {normal_output}")
+    logger.info("Saved images")
 
     if ctx.obj["keypoints_file"]:
+        logger.info(f"Projecting keypoints from {ctx.obj['keypoints_file']}")
+
         if not ctx.obj["keypoints_file"].exists():
             if ctx.obj["strict"]:
-                raise FileNotFoundError(f"File {ctx.obj['keypoints_file']} does not exist.")
+                msg = f"File {ctx.obj['keypoints_file']} does not exist."
+                logger.error(msg)
+                raise FileNotFoundError(msg)
             else:
-                print(f"Warning: File {ctx.obj['keypoints_file']} does not exist.")
+                logger.warning(f"File {ctx.obj['keypoints_file']} does not exist. "
+                               f"Skipping projection of keypoints.")
                 return
 
         projected_keypoints: list[dict[str, tuple[float, float]]] = []
 
-        if ctx.obj["verbose"]:
-            print("Projecting keypoints...")
-
+        logger.info(f"Loading keypoints from {ctx.obj['keypoints_file']}")
         markups = MarkupManager.from_file(ctx.obj["keypoints_file"])
 
+        logger.info("Projecting keypoints...")
         for markup in markups.markups:
             if markup.markup_type == MarkupTypes.FIDUCIAL:
                 for point in markup.control_points:
                     if len(point.position) == 0:
                         if not ctx.obj["strict"]:
-                            print(f"Warning: Empty position for {point.label}")
+                            logger.warning(f"Empty position for {point.label}")
                             continue
                         else:
-                            raise ValueError(f"Empty position for {point.label}")
+                            msg = f"Empty position for {point.label}"
+                            logger.error(msg)
+                            raise ValueError(msg)
 
                     control_point = Vec3(*point.position[:3])
                     x, y = camera.project_back(control_point, normalized=True)
 
-                    print(f"Projected {point.label:<8}:\t{str(control_point):<64} -> ({x=}, {y=})")
+                    logger.debug(f"Projected {point.label}: {str(control_point)} -> ({x=}, {y=})")
 
                     projected_keypoints.append(
                         {
@@ -210,8 +232,8 @@ def equirectangular(
                         }
                     )
 
-        if ctx.obj["verbose"]:
-            print("Saving keypoints...")
+        output_file = ctx.obj["output"] / f"projected_{ctx.obj['mesh_name']}.kp.json"
+        logger.info(f"Saving projected keypoints to {output_file}")
 
-        with open(ctx.obj["output"] / f"projected_{ctx.obj['mesh_name']}.kp.json", "w") as f:
+        with output_file.open("w") as f:
             json.dump(projected_keypoints, f, indent=4)

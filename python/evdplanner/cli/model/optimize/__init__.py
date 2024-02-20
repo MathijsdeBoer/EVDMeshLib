@@ -2,6 +2,8 @@ from pathlib import Path
 
 import click
 
+from evdplanner.cli import set_verbosity
+
 
 @click.command()
 @click.option(
@@ -79,6 +81,12 @@ import click
     default=0,
     help="Number of workers for data loading.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Increase verbosity. (Use multiple times for more verbosity.)",
+)
 def optimize(
     anatomy: str,
     train_root: Path,
@@ -90,15 +98,21 @@ def optimize(
     seed: int | None = None,
     resolution: int = 1024,
     num_workers: int = 0,
+    verbose: int = 0,
 ):
     import json
+    import logging
     from math import pi
 
     import arrow
     import lightning.pytorch as pl
     import optuna
     import torch
-    from evdplanner.cli.model._util import get_data, train_model
+    from monai.metrics import MAEMetric, MSEMetric
+    from optuna.integration import PyTorchLightningPruningCallback
+
+    from evdplanner.network.training.utils import train_model
+    from evdplanner.network.training.utils import get_data
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
     from evdplanner.network.training.lightning_wrapper import LightningWrapper
@@ -107,20 +121,26 @@ def optimize(
         MeanSquaredAngularError,
     )
     from evdplanner.network.transforms.defaults import default_load_transforms
-    from monai.metrics import MAEMetric, MSEMetric
-    from optuna.integration import PyTorchLightningPruningCallback
+
+    set_verbosity(verbose)
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"Training on {anatomy} data.")
 
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
+    logger.info(f"Collecting data from {train_root}.")
     train_samples, maps, keypoints = get_data(
         train_root,
         anatomy,
         output_label_key="keypoints",
     )
     if test_root:
+        logger.info(f"Collecting data from {test_root}.")
         test_samples, _, _ = get_data(test_root, anatomy)
     else:
+        logger.warning("No test data provided. Using validation data for testing.")
         test_samples = None
 
     def _objective(trial: optuna.Trial) -> float:
@@ -128,6 +148,7 @@ def optimize(
             pl.seed_everything(seed)
 
         batch_size = trial.suggest_int("batch_size", 1, 32)
+        logger.debug(f"batch_size: {batch_size}")
 
         dm = EVDPlannerDataModule(
             train_samples=train_samples,
@@ -140,13 +161,17 @@ def optimize(
         )
 
         if anatomy == "skin":
+            logger.debug("Setting ranges for skin.")
             x_range = (0.0, 2.0 * pi)
             y_range = (0.0, pi)
         elif anatomy == "ventricles":
+            logger.debug("Setting ranges for ventricles.")
             x_range = (0.0, 1.0)
             y_range = (0.0, 1.0)
         else:
-            raise ValueError(f"Anatomy '{anatomy}' not recognized.")
+            msg = f"Anatomy '{anatomy}' not recognized."
+            logger.error(msg)
+            raise ValueError(msg)
 
         metrics = [
             MAEMetric(),
@@ -155,6 +180,10 @@ def optimize(
             MeanAbsoluteAngularError(x_range=x_range, y_range=y_range),
         ]
 
+        logger.debug(f"Using metrics: {metrics}")
+        logger.info(f"Using hp/{metrics[0].__class__.__name__} for optuna optimization.")
+
+        logger.debug("Creating model.")
         model = LightningWrapper.from_optuna_parameters(
             model=PointRegressor,
             trial=trial,
@@ -164,8 +193,10 @@ def optimize(
             in_shape=(4, resolution // 2, resolution),
             out_shape=(len(keypoints), 2),
         )
+        logger.debug(f"Setting input shape to (1, 4, {resolution // 2}, {resolution}).")
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
+        logger.info("Training model.")
         model, test_loss, output_log_dir = train_model(
             model,
             dm,
@@ -186,6 +217,7 @@ def optimize(
         trial.set_user_attr("log_dir", output_log_dir)
         return test_loss[f"hp/{metrics[0].__class__.__name__}"]
 
+    logger.info(f"Running {n_trials} trials.")
     pruner = optuna.pruners.MedianPruner(
         n_startup_trials=5,
         n_warmup_steps=50,
@@ -199,10 +231,12 @@ def optimize(
     )
 
     if initial_config:
+        logger.info(f"Enqueuing trial from {initial_config}.")
         with initial_config.open("r") as file:
             starting_parameters = json.load(file)
             study.enqueue_trial(starting_parameters, user_attrs={"source": f"{initial_config.name}"})
 
+    logger.info("Starting optimization.")
     study.optimize(
         _objective,
         n_trials=n_trials,
@@ -210,16 +244,17 @@ def optimize(
         gc_after_trial=True,
     )
 
-    print(f"Number of finished trials: {len(study.trials)}")
-    print("Best trial:")
+    logger.info(f"Number of finished trials: {len(study.trials)}")
+    logger.info("Best trial:")
     best_trial = study.best_trial
     actual_log_dir = best_trial.user_attrs["log_dir"]
 
-    print(f"  Value: {best_trial.value}")
-    print("  Params: ")
+    logger.info(f"Value: {best_trial.value}")
+    logger.info("Params: ")
     for key, value in best_trial.params.items():
-        print(f"    {key:>16}: {value}")
+        logger.info(f"\t{key:>16}: {value}")
 
+    logger.info(f"Writing best trial config to {actual_log_dir}.")
     with (actual_log_dir / "best_trial.optuna.json").open("w") as trial_file:
         json.dump(best_trial.params, trial_file, indent=4)
 

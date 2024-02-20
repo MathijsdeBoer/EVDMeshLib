@@ -1,6 +1,9 @@
+from math import pi
 from pathlib import Path
 
 import click
+
+from evdplanner.cli import set_verbosity
 
 
 @click.command()
@@ -81,6 +84,12 @@ import click
     default=0,
     help="Number of workers for data loading.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Increase verbosity. (Use multiple times for more verbosity.)",
+)
 def train(
     anatomy: str,
     train_root: Path,
@@ -92,12 +101,17 @@ def train(
     seed: int | None = None,
     resolution: int = 1024,
     num_workers: int = 0,
+    verbose: int = 0,
 ) -> None:
     import json
+    import logging
 
     import lightning.pytorch as pl
     import torch
-    from evdplanner.cli.model._util import get_data, train_model
+    from monai.metrics import MAEMetric, MSEMetric
+
+    from evdplanner.network.training.utils import train_model
+    from evdplanner.network.training.utils import get_data
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
     from evdplanner.network.training.lightning_wrapper import LightningWrapper
@@ -109,7 +123,10 @@ def train(
     from evdplanner.network.training.callbacks import KeypointPlotCallback
     from evdplanner.network.training.utils import get_lr_scheduler
     from evdplanner.network.transforms.defaults import default_load_transforms
-    from monai.metrics import MAEMetric, MSEMetric
+
+    set_verbosity(verbose)
+    logger = logging.getLogger(__name__)
+    logger.info(f"Training model for {anatomy}.")
 
     if seed:
         pl.seed_everything(seed)
@@ -120,18 +137,26 @@ def train(
     if not model_path.parent.exists():
         model_path.parent.mkdir(parents=True)
 
+    logger.info(f"Collecting data from {train_root}.")
     train_samples, maps, keypoints = get_data(
         train_root,
         anatomy,
         output_label_key="keypoints",
     )
     if test_root:
+        logger.info(f"Collecting data from {test_root}.")
         test_samples, _, _ = get_data(test_root, anatomy)
     else:
+        logger.info("No test data provided. Using validation data for testing.")
         test_samples = None
 
     with config.open("r") as file:
+        logger.info(f"Loading configuration from {config}.")
         config = json.load(file)
+
+        logger.debug(f"Configuration:")
+        logger.debug(json.dumps(config, indent=4))
+
         dm = EVDPlannerDataModule(
             train_samples=train_samples,
             maps=maps,
@@ -150,6 +175,28 @@ def train(
             out_shape=(len(keypoints), 2),
         )
 
+        if anatomy == "skin":
+            logger.debug("Setting ranges for skin.")
+            x_range = (0.0, 2.0 * pi)
+            y_range = (0.0, pi)
+        elif anatomy == "ventricles":
+            logger.debug("Setting ranges for ventricles.")
+            x_range = (0.0, 1.0)
+            y_range = (0.0, 1.0)
+        else:
+            msg = f"Anatomy '{anatomy}' not recognized."
+            logger.error(msg)
+            raise ValueError(msg)
+
+        metrics = [
+            MAEMetric(),
+            MSEMetric(),
+            MeanSquaredAngularError(x_range=x_range, y_range=y_range),
+            MeanAbsoluteAngularError(x_range=x_range, y_range=y_range),
+        ]
+
+        logger.debug(f"Using metrics: {metrics}")
+
         optimizer = get_optimizer(
             config["optimizer"],
             core_model.parameters(),
@@ -160,21 +207,20 @@ def train(
             optimizer,
             **config["scheduler_args"]
         )
+
+        logger.debug("Creating model.")
         model = LightningWrapper.build_wrapper(
             model=core_model,
             loss=get_loss_fn(config["loss_fn"]),
             optimizer=optimizer,
             scheduler=scheduler,
-            metrics=[
-                MSEMetric(),
-                MAEMetric(),
-                MeanSquaredAngularError(),
-                MeanAbsoluteAngularError(),
-            ],
+            metrics=metrics,
             config=config,
         )
+        logger.debug(f"Setting input shape to (1, 4, {resolution // 2}, {resolution}).")
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
+    logger.info("Training model.")
     model, test_loss, _ = train_model(
         model,
         dm,
@@ -193,7 +239,10 @@ def train(
         ],
     )
 
+    logger.info(f"Saving model to {model_path}.")
     torch.save(model, model_path)
+
     results_path = log_dir / f"{model_path.stem}_test_results.json"
+    logger.info(f"Saving test results to {results_path}.")
     with results_path.open("w") as file:
         json.dump(test_loss, file, indent=4)

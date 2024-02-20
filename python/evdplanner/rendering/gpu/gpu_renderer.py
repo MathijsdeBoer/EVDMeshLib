@@ -1,10 +1,14 @@
-from time import time
+import logging
 
 import numpy as np
 import taichi as ti
 import taichi.math as tm
-from evdplanner.rs import CameraType, Mesh
-from evdplanner.rs.rendering import Camera, CPURenderer, IntersectionSort
+
+from evdplanner.geometry import Mesh
+from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+
+
+_logger = logging.getLogger(__name__)
 
 
 @ti.data_oriented
@@ -24,21 +28,26 @@ class GPURenderer(CPURenderer):
 
     def render(self, intersection_mode: IntersectionSort, epsilon: float = 1e-8) -> np.ndarray:
         ti.init(arch=ti.gpu, default_fp=ti.f64, kernel_profiler=True, enable_fallback=False)
+
+        _logger.debug(f"Initializing pixel field with {self.x_resolution=}, {self.y_resolution=}")
         pixels = ti.Vector.field(4, dtype=ti.f64, shape=(self.y_resolution, self.x_resolution))
         pixels.fill(-1.0)
 
+        _logger.debug(f"Initializing ray directions field with {self.x_resolution=}, {self.y_resolution=}")
         ray_directions = ti.Vector.field(
             3, dtype=ti.f64, shape=(self.y_resolution, self.x_resolution)
         )
 
+        _logger.debug(f"Initializing camera origin with {self.camera.origin=}")
         camera_origin = ti.Vector(self.camera.origin.as_float_list())
 
+        _logger.debug(f"Generating triangles from mesh")
         tris = self.mesh.triangles_as_vertex_array()
         triangles = ti.Vector.field(3, dtype=ti.f64, shape=tris.shape[:-1])
         triangles.from_numpy(tris)
+        _logger.debug(f"{triangles.shape=}")
 
-        print(f"{triangles.shape=}")
-
+        _logger.debug(f"Generating normals from mesh")
         norms = [x.normal.as_float_list() for x in self.mesh.triangles]
         normals = ti.Vector.field(3, dtype=ti.f64, shape=(len(norms)))
         normals.from_numpy(np.array(norms))
@@ -65,11 +74,17 @@ class GPURenderer(CPURenderer):
                         ).normalized()
 
             elif self.camera.camera_type == CameraType.Perspective:
-                raise NotImplementedError("Perspective camera not implemented yet")
+                msg = "Perspective camera not implemented yet"
+                _logger.error(msg)
+                raise NotImplementedError(msg)
             elif self.camera.camera_type == CameraType.Orthographic:
-                raise NotImplementedError("Orthographic camera not implemented yet")
+                msg = "Orthographic camera not implemented yet"
+                _logger.error(msg)
+                raise NotImplementedError(msg)
             else:
-                raise ValueError(f"Unknown camera type {self.camera.camera_type}")
+                msg = f"Unknown camera type {self.camera.camera_type}"
+                _logger.error(msg)
+                raise ValueError(msg)
 
             generate_ray_directions_kernel()
 
@@ -140,8 +155,10 @@ class GPURenderer(CPURenderer):
                             pixels[pix_y, pix_x][2] = normal[1]
                             pixels[pix_y, pix_x][3] = normal[2]
 
+        _logger.debug("Generating ray directions")
         generate_ray_directions()
-        start_time = time()
+
+        _logger.debug("Flattening mesh")
         flatten_mesh_kernel()
 
         return pixels.to_numpy()

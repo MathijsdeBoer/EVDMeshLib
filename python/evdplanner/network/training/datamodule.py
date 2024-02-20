@@ -1,9 +1,14 @@
+import json
+import logging
 from pathlib import Path
 
 import monai.transforms as mt
 from lightning.pytorch import LightningDataModule
 from monai.data import CacheDataset
 from torch.utils.data import DataLoader, random_split
+
+
+_logger = logging.getLogger(__name__)
 
 
 def validate_samples(
@@ -13,31 +18,45 @@ def validate_samples(
 ) -> None:
     for sample in samples:
         if not isinstance(sample, dict):
-            print(sample)
-            raise ValueError("Each sample must be a dictionary.")
+            msg = "Each sample must be a dictionary."
+            _logger.debug(json.dumps(sample, indent=4))
+            _logger.error(msg)
+            raise ValueError(msg)
         for m in maps:
             if m not in sample:
-                print(sample)
-                raise ValueError(f"Each sample must contain a '{m}' key.")
+                msg = f"Each sample must contain a '{m}' key."
+                _logger.debug(json.dumps(sample, indent=4))
+                _logger.error(msg)
+                raise ValueError(msg)
         if keypoints_key not in sample:
-            print(sample)
-            raise ValueError(f"Each sample must contain a '{keypoints_key}' key.")
+            msg = f"Each sample must contain a '{keypoints_key}' key."
+            _logger.debug(json.dumps(sample, indent=4))
+            _logger.error(msg)
+            raise ValueError(msg)
 
         for m in maps:
             if not isinstance(sample[m], Path):
-                print(sample)
-                raise ValueError(f"The '{m}' key must contain a Path object.")
+                msg = f"The '{m}' key must contain a Path object."
+                _logger.debug(json.dumps(sample, indent=4))
+                _logger.error(msg)
+                raise ValueError(msg)
         if not isinstance(sample[keypoints_key], Path):
-            print(sample)
-            raise ValueError("The 'label' key must contain a Path object.")
+            msg = "The 'label' key must contain a Path object."
+            _logger.debug(json.dumps(sample, indent=4))
+            _logger.error(msg)
+            raise ValueError(msg)
 
         for m in maps:
             if not sample[m].exists():
-                print(sample)
-                raise ValueError(f"The '{m}' file does not exist.")
+                msg = f"The '{m}' file does not exist."
+                _logger.debug(json.dumps(sample, indent=4))
+                _logger.error(msg)
+                raise ValueError(msg)
         if not sample[keypoints_key].exists():
-            print(sample)
-            raise ValueError("The 'label' file does not exist.")
+            msg = "The 'label' file does not exist."
+            _logger.debug(json.dumps(sample, indent=4))
+            _logger.error(msg)
+            raise ValueError(msg)
 
 
 class EVDPlannerDataModule(LightningDataModule):
