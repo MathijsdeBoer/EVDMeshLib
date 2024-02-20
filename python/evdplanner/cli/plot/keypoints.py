@@ -3,8 +3,6 @@ from pathlib import Path
 
 import click
 
-from evdplanner.cli import set_verbosity
-
 
 @click.command()
 @click.argument(
@@ -25,6 +23,8 @@ def keypoints(
     import matplotlib.pyplot as plt
     import seaborn as sns
     from imageio.v3 import imread
+
+    from evdplanner.cli import set_verbosity
 
     set_verbosity(verbose)
     logger = logging.getLogger(__name__)

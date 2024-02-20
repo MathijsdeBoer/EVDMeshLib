@@ -1,7 +1,7 @@
-from evdplanner.markups.markup_manager import MarkupManager
-from evdplanner.markups.markup import Markup, MarkupTypes
-from evdplanner.markups.display_settings import DisplaySettings
-from evdplanner.markups.fiducial import Fiducial
+from .markup_manager import MarkupManager
+from .markup import Markup, MarkupTypes
+from .display_settings import DisplaySettings
+from .fiducial import Fiducial
 
 
 __all__ = [

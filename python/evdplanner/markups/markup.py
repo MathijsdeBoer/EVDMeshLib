@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
-from evdplanner.markups.display_settings import DisplaySettings
-from evdplanner.markups.fiducial import Fiducial
+from .display_settings import DisplaySettings
+from .fiducial import Fiducial
 
 
 class MarkupTypes(Enum):

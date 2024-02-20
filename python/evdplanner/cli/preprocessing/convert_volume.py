@@ -2,8 +2,6 @@ from pathlib import Path
 
 import click
 
-from evdplanner.cli import set_verbosity
-
 
 @click.command(name="convert-volume")
 @click.argument(
@@ -32,6 +30,8 @@ def convert_volume(
 
     import numpy as np
     import SimpleITK as sitk
+
+    from evdplanner.cli import set_verbosity
     from evdplanner.geometry import volume_to_mesh
 
     set_verbosity(verbose)

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-from evdplanner.network import PointRegressor
 
 
 @click.command(name="predict-skin-mesh")
@@ -16,6 +15,7 @@ def predict_skin_mesh(
     import torch
     from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
+    from evdplanner.network import PointRegressor
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
 
     if gpu_renderer:

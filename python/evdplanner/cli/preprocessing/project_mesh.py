@@ -4,8 +4,6 @@ from pathlib import Path
 
 import click
 
-from evdplanner.cli import set_verbosity
-
 
 @click.group(name="project")
 @click.pass_context
@@ -74,6 +72,7 @@ def project_mesh(
 ):
     import numpy as np
 
+    from evdplanner.cli import set_verbosity
     from evdplanner.geometry import Mesh
 
     np.seterr(all="raise")

@@ -2,8 +2,6 @@ from pathlib import Path
 
 import click
 
-from evdplanner.cli import set_verbosity
-
 
 @click.command()
 @click.option(
@@ -111,7 +109,8 @@ def optimize(
     from monai.metrics import MAEMetric, MSEMetric
     from optuna.integration import PyTorchLightningPruningCallback
 
-    from evdplanner.network.training.utils import train_model
+    from evdplanner.cli import set_verbosity
+    from evdplanner.network.training import train_model
     from evdplanner.network.training.utils import get_data
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.training.datamodule import EVDPlannerDataModule

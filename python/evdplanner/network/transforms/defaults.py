@@ -1,6 +1,6 @@
 import monai.transforms as mt
 import torch
-from evdplanner.network.transforms.json_keypoint_loader import JsonKeypointLoaderd
+from .json_keypoint_loader import JsonKeypointLoaderd
 
 
 def default_load_transforms(

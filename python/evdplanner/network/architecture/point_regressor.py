@@ -4,7 +4,7 @@ from typing import Any, Callable, Sequence
 import optuna
 import torch
 import torch.nn as nn
-from evdplanner.network.training.optimizable_model import OptimizableModel
+from evdplanner.network.training import OptimizableModel
 from monai.networks.blocks import ConvDenseBlock, Convolution
 from monai.networks.layers import Act, Flatten, Norm, Reshape, get_act_layer
 from monai.networks.nets import Regressor

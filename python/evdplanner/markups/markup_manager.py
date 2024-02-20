@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from typing import Sequence
 
-from evdplanner.markups.display_settings import DisplaySettings
-from evdplanner.markups.markup import Markup, MarkupTypes
+from .display_settings import DisplaySettings
+from .markup import Markup, MarkupTypes
 
 
 class MarkupManager:
