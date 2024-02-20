@@ -165,11 +165,7 @@ def optimize(
         )
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
-        with (log_dir / "trial_params.json").open("w") as model_config_file:
-            model.config["batch_size"] = batch_size
-            json.dump(model.config, model_config_file, indent=4)
-
-        model, test_loss = train_model(
+        model, test_loss, output_log_dir = train_model(
             model,
             dm,
             log_dir,
@@ -182,6 +178,10 @@ def optimize(
                 ),
             ],
         )
+
+        model.config["batch_size"] = batch_size
+        trial.set_user_attr("model_config", model.config)
+        trial.set_user_attr("log_dir", output_log_dir)
         return test_loss[f"hp/{metrics[0].__class__.__name__}"]
 
     pruner = optuna.pruners.MedianPruner(
@@ -191,15 +191,15 @@ def optimize(
         n_min_trials=5,
     )
     study = optuna.create_study(
-        study_name="optuna/point_regressor",
+        study_name=f"optuna/{anatomy}/point_regressor",
         direction="minimize",
         pruner=pruner,
     )
 
     if initial_config:
         with initial_config.open("r") as file:
-            initial_config = json.load(file)
-            study.enqueue_trial(initial_config, user_attrs={"source": f"{initial_config.name}"})
+            starting_parameters = json.load(file)
+            study.enqueue_trial(starting_parameters, user_attrs={"source": f"{initial_config.name}"})
 
     study.optimize(
         _objective,
@@ -211,11 +211,15 @@ def optimize(
     print(f"Number of finished trials: {len(study.trials)}")
     print("Best trial:")
     best_trial = study.best_trial
+    actual_log_dir = best_trial.user_attrs["log_dir"]
 
     print(f"  Value: {best_trial.value}")
     print("  Params: ")
     for key, value in best_trial.params.items():
         print(f"    {key:>16}: {value}")
 
-    with (log_dir / "best_trial.json").open("w") as trial_file:
+    with (actual_log_dir / "best_trial.optuna.json").open("w") as trial_file:
         json.dump(best_trial.params, trial_file, indent=4)
+
+    with (actual_log_dir / "best_trial.evdplanner.json").open("w") as trial_file:
+        json.dump(best_trial.user_attrs["model_config"], trial_file, indent=4)

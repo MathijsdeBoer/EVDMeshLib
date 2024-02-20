@@ -1,4 +1,3 @@
-import math
 from pathlib import Path
 
 import click
@@ -107,6 +106,8 @@ def train(
         MeanSquaredAngularError,
     )
     from evdplanner.network.training.utils import get_loss_fn, get_optimizer
+    from evdplanner.network.training.callbacks import KeypointPlotCallback
+    from evdplanner.network.training.utils import get_lr_scheduler
     from evdplanner.network.transforms.defaults import default_load_transforms
     from monai.metrics import MAEMetric, MSEMetric
 
@@ -150,19 +151,20 @@ def train(
         )
 
         optimizer = get_optimizer(
-            config["optimizer"], core_model.parameters(), **config["optimizer_args"]
+            config["optimizer"],
+            core_model.parameters(),
+            **config["optimizer_args"]
+        )
+        scheduler = get_lr_scheduler(
+            config.get("scheduler", None),
+            optimizer,
+            **config["scheduler_args"]
         )
         model = LightningWrapper.build_wrapper(
             model=core_model,
             loss=get_loss_fn(config["loss_fn"]),
             optimizer=optimizer,
-            scheduler=torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer,
-                T_max=math.floor(
-                    epochs * int(len(train_samples) * dm.train_split) / config["batch_size"]
-                ),
-                eta_min=1e-8,
-            ),
+            scheduler=scheduler,
             metrics=[
                 MSEMetric(),
                 MAEMetric(),
@@ -173,14 +175,25 @@ def train(
         )
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
-    model, test_loss = train_model(
+    model, test_loss, _ = train_model(
         model,
         dm,
         log_dir,
         epochs,
         anatomy,
         mode="train",
-        additional_callbacks=[pl.callbacks.LearningRateMonitor(logging_interval="step")],
+        additional_callbacks=[
+            pl.callbacks.LearningRateMonitor(logging_interval="step"),
+            KeypointPlotCallback(
+                filename="keypoint_plot.png",
+                log_image=True,
+                log_loss=True,
+                log_lr=True,
+            ),
+        ],
     )
 
     torch.save(model, model_path)
+    results_path = log_dir / f"{model_path.stem}_test_results.json"
+    with results_path.open("w") as file:
+        json.dump(test_loss, file, indent=4)

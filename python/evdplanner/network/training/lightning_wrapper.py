@@ -54,26 +54,26 @@ class LightningWrapper(pl.LightningModule):
         metrics: list[nn.Module | Callable[[Tensor, Tensor], Tensor]] | None = None,
         **kwargs,
     ) -> "LightningWrapper":
-        params = model.get_optuna_parameters(trial)
+        config = model.get_optuna_parameters(trial)
         loggable_params = model.loggable_parameters()
-        model = model.from_optuna_parameters(params, **kwargs)
-        loss = get_loss_fn(params["loss_fn"])
+        model = model.from_optuna_parameters(config, **kwargs)
+        loss = get_loss_fn(config["loss_fn"])
         optimizer = get_optimizer(
-            params["optimizer"], model.parameters(), **params["optimizer_args"]
+            config["optimizer"], model.parameters(), **config["optimizer_args"]
         )
 
-        if params.get("scheduler", None) is None:
+        if config.get("scheduler", None) is None:
             scheduler = None
         else:
             scheduler = get_lr_scheduler(
-                params["scheduler"], optimizer, **params["scheduler_args"]
+                config["scheduler"], optimizer, **config["scheduler_args"]
             )
 
         wrapper = cls.build_wrapper(
             model,
             loss,
             optimizer,
-            params,
+            config,
             scheduler,
             metrics,
         )

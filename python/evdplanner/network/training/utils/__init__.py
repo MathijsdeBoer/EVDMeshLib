@@ -68,10 +68,13 @@ def get_optimizer(
 
 
 def get_lr_scheduler(
-    lr_scheduler: optim.lr_scheduler.LRScheduler | str,
+    lr_scheduler: optim.lr_scheduler.LRScheduler | str | None,
     optimizer: optim.Optimizer,
     **kwargs,
-) -> optim.lr_scheduler.LRScheduler:
+) -> optim.lr_scheduler.LRScheduler | None:
+    if lr_scheduler is None:
+        return None
+
     if isinstance(lr_scheduler, str):
         match lr_scheduler.lower():
             case "step":

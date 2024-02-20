@@ -15,11 +15,17 @@ class KeypointPlotCallback(pl.Callback):
         filename: str = "keypoint_plot.png",
         log_image: bool = True,
         log_loss: bool = True,
+        log_lr: bool = False,
     ) -> None:
         super().__init__()
 
+        if log_lr and not log_loss:
+            msg = "Cannot log learning rate without logging loss."
+            raise ValueError(msg)
+
         self.log_image = log_image
         self.log_loss = log_loss
+        self.log_lr = log_lr
         self.output_filename = filename
 
         self._train_batches = []
@@ -29,6 +35,7 @@ class KeypointPlotCallback(pl.Callback):
             "step": [],
             "epoch": [],
             "stage": [],
+            "lr": [],
         }
 
     def on_train_batch_end(
@@ -58,6 +65,9 @@ class KeypointPlotCallback(pl.Callback):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
+        if trainer.sanity_checking:
+            return
+
         val_step = {
             "step": trainer.global_step,
             "epoch": trainer.current_epoch,
@@ -87,12 +97,14 @@ class KeypointPlotCallback(pl.Callback):
                 self._losses["stage"].append("train")
                 self._losses["step"].append(batch["step"])
                 self._losses["epoch"].append(batch["epoch"])
+                self._losses["lr"].append(trainer.optimizers[0].param_groups[0]["lr"])
 
             for batch in self._val_batches:
                 self._losses["value"].append(batch["val_loss"])
                 self._losses["stage"].append("val")
                 self._losses["step"].append(batch["step"])
                 self._losses["epoch"].append(batch["epoch"])
+                self._losses["lr"].append(trainer.optimizers[0].param_groups[0]["lr"])
 
         sns.set_theme(context="paper", style="dark")
         sns.despine(left=True, bottom=True)
@@ -144,6 +156,20 @@ class KeypointPlotCallback(pl.Callback):
         ax.set_xlim(0, None)
         ax.set_yscale("log")
 
+        if self.log_lr:
+            ax2 = ax.twinx()
+            sns.lineplot(
+                data=self._losses,
+                x="step",
+                y="lr",
+                ax=ax2,
+                color="black",
+                alpha=0.5,
+                label="Learning Rate",
+            )
+            ax2.set_ylabel("Learning Rate")
+            ax2.set_yscale("log")
+
     def _log_image_fn(self, ax: plt.Axes) -> None:
         x = torch.cat([batch["image"] for batch in self._val_batches], dim=0)
         y = torch.cat([batch["label"] for batch in self._val_batches], dim=0)
@@ -164,6 +190,20 @@ class KeypointPlotCallback(pl.Callback):
             cmap="gray",
             origin="upper",
         )
+
+        for keypoint in range(y.shape[1]):
+            sns.lineplot(
+                x=[
+                    y[0, keypoint, 0].cpu().numpy() * image_x,
+                    y_hat[0, keypoint, 0].cpu().numpy() * image_x,
+                    ],
+                y=[
+                    y[0, keypoint, 1].cpu().numpy() * image_y,
+                    y_hat[0, keypoint, 1].cpu().numpy() * image_y,
+                    ],
+                ax=ax,
+            )
+
         sns.scatterplot(
             x=y[0, :, 0].cpu().numpy() * image_x,
             y=y[0, :, 1].cpu().numpy() * image_y,
@@ -176,19 +216,6 @@ class KeypointPlotCallback(pl.Callback):
             ax=ax,
             markers="o",
         )
-
-        for keypoint in range(y.shape[1]):
-            sns.lineplot(
-                x=[
-                    y[0, keypoint, 0].cpu().numpy() * image_x,
-                    y_hat[0, keypoint, 0].cpu().numpy() * image_x,
-                ],
-                y=[
-                    y[0, keypoint, 1].cpu().numpy() * image_y,
-                    y_hat[0, keypoint, 1].cpu().numpy() * image_y,
-                ],
-                ax=ax,
-            )
 
         ax.set_xlim(0, image_x)
         ax.set_ylim(0, image_y)

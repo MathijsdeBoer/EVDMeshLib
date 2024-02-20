@@ -134,7 +134,7 @@ class PointRegressor(Regressor, OptimizableModel):
             "optimizer": optuna_trial.suggest_categorical("optimizer", ["adam", "sgd"]),
             "optimizer_args": {
                 "lr": optuna_trial.suggest_float("lr", 1e-5, 1e-1, log=True),
-                "weight_decay": optuna_trial.suggest_float("weight_decay", 0.0, 1e-2, log=True),
+                "weight_decay": optuna_trial.suggest_float("weight_decay", 1e-12, 1e-1, log=True),
             },
             "filters": optuna_trial.suggest_categorical("filters", [2**i for i in range(3, 6)]),
             "max_filters": optuna_trial.suggest_categorical(

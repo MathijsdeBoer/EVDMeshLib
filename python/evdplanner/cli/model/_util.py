@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Mapping
 
+import arrow
 import lightning.pytorch as pl
 from evdplanner.network.training.datamodule import EVDPlannerDataModule
 from evdplanner.network.training.lightning_wrapper import LightningWrapper
@@ -59,18 +60,14 @@ def train_model(
     anatomy: str,
     mode="train",
     additional_callbacks: list[pl.callbacks.Callback] = None,
-) -> tuple[LightningWrapper, Mapping[str, float]]:
-    from evdplanner.network.training.callbacks import KeypointPlotCallback
+) -> tuple[LightningWrapper, Mapping[str, float], Path]:
     from lightning.pytorch import loggers
 
     callbacks = [
         pl.callbacks.ModelCheckpoint(monitor="val_loss"),
-        KeypointPlotCallback(
-            filename="keypoint_plot.png",
-            log_image=True,
-            log_loss=True,
-        ),
     ] + (additional_callbacks or [])
+
+    name = f"{mode}/{anatomy}/{model.log_name}/{arrow.now().format('YYYY-MM-DD')}"
 
     trainer = pl.Trainer(
         accelerator="gpu",
@@ -78,7 +75,7 @@ def train_model(
         max_epochs=epochs,
         logger=loggers.TensorBoardLogger(
             save_dir=log_dir,
-            name=f"{mode}/{anatomy}/{model.log_name}",
+            name=name,
             log_graph=True,
         ),
         log_every_n_steps=1,
@@ -93,4 +90,4 @@ def train_model(
     else:
         result = trainer.validate(model, datamodule=datamodule)
 
-    return model, result[0]
+    return model, result[0], log_dir / name
