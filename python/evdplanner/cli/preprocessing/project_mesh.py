@@ -1,4 +1,3 @@
-import logging
 from math import pi
 from pathlib import Path
 
@@ -107,8 +106,7 @@ def equirectangular(
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
     from imageio import imwrite
-
-    logger = logging.getLogger(__name__)
+    from loguru import logger
 
     logger.info(
         f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces"

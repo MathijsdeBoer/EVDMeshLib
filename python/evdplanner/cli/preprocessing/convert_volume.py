@@ -26,15 +26,13 @@ def convert_volume(
     verbose: int = 0,
 ):
     """Convert volume to stl."""
-    import logging
-
     import numpy as np
     import SimpleITK as sitk
     from evdplanner.cli import set_verbosity
     from evdplanner.geometry import volume_to_mesh
+    from loguru import logger
 
     set_verbosity(verbose)
-    logger = logging.getLogger(__name__)
 
     logger.info(f"Converting {volume} to {output}...")
     logger.debug(f"Reading volume...")

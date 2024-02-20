@@ -1,9 +1,10 @@
-import logging
+import sys
 
 import click
 from evdplanner.cli.model import model
 from evdplanner.cli.plot import plot
 from evdplanner.cli.preprocessing import preprocess
+from loguru import logger
 
 
 @click.group()
@@ -18,12 +19,13 @@ cli.add_command(preprocess)
 
 
 def set_verbosity(level: int) -> None:
+    logger.remove()
     match level:
         case 0:
-            logging.basicConfig(level=logging.WARNING)
+            logger.add(sys.stderr, level="ERROR")
         case 1:
-            logging.basicConfig(level=logging.INFO)
+            logger.add(sys.stderr, level="INFO")
         case 2:
-            logging.basicConfig(level=logging.DEBUG)
+            logger.add(sys.stderr, level="DEBUG")
         case _:
-            logging.basicConfig(level=logging.DEBUG)
+            logger.add(sys.stderr, level="DEBUG")

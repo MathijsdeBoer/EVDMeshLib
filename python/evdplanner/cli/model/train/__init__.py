@@ -102,7 +102,6 @@ def train(
     verbose: int = 0,
 ) -> None:
     import json
-    import logging
 
     import lightning.pytorch as pl
     import torch
@@ -123,10 +122,10 @@ def train(
         get_optimizer,
     )
     from evdplanner.network.transforms.defaults import default_load_transforms
+    from loguru import logger
     from monai.metrics import MAEMetric, MSEMetric
 
     set_verbosity(verbose)
-    logger = logging.getLogger(__name__)
     logger.info(f"Training model for {anatomy}.")
 
     if seed:

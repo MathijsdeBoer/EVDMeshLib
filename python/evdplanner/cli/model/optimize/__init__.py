@@ -99,7 +99,6 @@ def optimize(
     verbose: int = 0,
 ):
     import json
-    import logging
     from math import pi
 
     import arrow
@@ -117,11 +116,11 @@ def optimize(
     )
     from evdplanner.network.training.utils import get_data
     from evdplanner.network.transforms.defaults import default_load_transforms
+    from loguru import logger
     from monai.metrics import MAEMetric, MSEMetric
     from optuna.integration import PyTorchLightningPruningCallback
 
     set_verbosity(verbose)
-    logger = logging.getLogger(__name__)
 
     logger.info(f"Training on {anatomy} data.")
 
