@@ -60,6 +60,7 @@ def train_model(
     anatomy: str,
     mode="train",
     additional_callbacks: list[pl.callbacks.Callback] = None,
+    session_name: str = None,
 ) -> tuple[LightningWrapper, Mapping[str, float], Path]:
     from lightning.pytorch import loggers
 
@@ -67,7 +68,10 @@ def train_model(
         pl.callbacks.ModelCheckpoint(monitor="val_loss"),
     ] + (additional_callbacks or [])
 
-    name = f"{mode}/{anatomy}/{model.log_name}/{arrow.now().format('YYYY-MM-DD')}"
+    if session_name:
+        name = f"{mode}/{anatomy}/{model.log_name}/{session_name}"
+    else:
+        name = f"{mode}/{anatomy}/{model.log_name}/{arrow.now().format('YYYY-MM-DD')}"
 
     trainer = pl.Trainer(
         accelerator="gpu",

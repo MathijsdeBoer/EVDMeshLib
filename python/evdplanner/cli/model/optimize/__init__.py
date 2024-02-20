@@ -94,6 +94,7 @@ def optimize(
     import json
     from math import pi
 
+    import arrow
     import lightning.pytorch as pl
     import optuna
     import torch
@@ -177,6 +178,7 @@ def optimize(
                     trial, monitor=f"hp/{metrics[0].__class__.__name__}"
                 ),
             ],
+            session_name=arrow.now().format("YYYY-MM-DD"),
         )
 
         model.config["batch_size"] = batch_size
