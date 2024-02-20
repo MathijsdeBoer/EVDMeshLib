@@ -3,10 +3,8 @@ import logging
 import numpy as np
 import taichi as ti
 import taichi.math as tm
-
 from evdplanner.geometry import Mesh
 from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
-
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +31,9 @@ class GPURenderer(CPURenderer):
         pixels = ti.Vector.field(4, dtype=ti.f64, shape=(self.y_resolution, self.x_resolution))
         pixels.fill(-1.0)
 
-        _logger.debug(f"Initializing ray directions field with {self.x_resolution=}, {self.y_resolution=}")
+        _logger.debug(
+            f"Initializing ray directions field with {self.x_resolution=}, {self.y_resolution=}"
+        )
         ray_directions = ti.Vector.field(
             3, dtype=ti.f64, shape=(self.y_resolution, self.x_resolution)
         )

@@ -3,10 +3,13 @@ from typing import Callable
 import lightning.pytorch as pl
 import optuna
 import torch
-from torch import Tensor, nn
-
 from evdplanner.network.training.optimizable_model import OptimizableModel
-from evdplanner.network.training.utils import get_loss_fn, get_optimizer, get_lr_scheduler
+from evdplanner.network.training.utils import (
+    get_loss_fn,
+    get_lr_scheduler,
+    get_optimizer,
+)
+from torch import Tensor, nn
 
 
 class LightningWrapper(pl.LightningModule):

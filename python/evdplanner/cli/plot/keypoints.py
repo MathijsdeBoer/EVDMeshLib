@@ -13,18 +13,13 @@ import click
 )
 @click.argument("output", type=click.Path(dir_okay=False, resolve_path=True, path_type=Path))
 @click.option("-v", "--verbose", count=True, help="Verbosity level (repeat for more)")
-def keypoints(
-    image: Path,
-    keypoints: Path,
-    output: Path,
-    verbose: int = 0
-):
+def keypoints(image: Path, keypoints: Path, output: Path, verbose: int = 0):
     import logging
+
     import matplotlib.pyplot as plt
     import seaborn as sns
-    from imageio.v3 import imread
-
     from evdplanner.cli import set_verbosity
+    from imageio.v3 import imread
 
     set_verbosity(verbose)
     logger = logging.getLogger(__name__)

@@ -106,22 +106,24 @@ def train(
 
     import lightning.pytorch as pl
     import torch
-    from monai.metrics import MAEMetric, MSEMetric
-
     from evdplanner.cli import set_verbosity
-    from evdplanner.network.training import train_model
-    from evdplanner.network.training.utils import get_data
     from evdplanner.network.architecture import PointRegressor
+    from evdplanner.network.training import train_model
+    from evdplanner.network.training.callbacks import KeypointPlotCallback
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
     from evdplanner.network.training.lightning_wrapper import LightningWrapper
     from evdplanner.network.training.losses import (
         MeanAbsoluteAngularError,
         MeanSquaredAngularError,
     )
-    from evdplanner.network.training.utils import get_loss_fn, get_optimizer
-    from evdplanner.network.training.callbacks import KeypointPlotCallback
-    from evdplanner.network.training.utils import get_lr_scheduler
+    from evdplanner.network.training.utils import (
+        get_data,
+        get_loss_fn,
+        get_lr_scheduler,
+        get_optimizer,
+    )
     from evdplanner.network.transforms.defaults import default_load_transforms
+    from monai.metrics import MAEMetric, MSEMetric
 
     set_verbosity(verbose)
     logger = logging.getLogger(__name__)
@@ -197,14 +199,10 @@ def train(
         logger.debug(f"Using metrics: {metrics}")
 
         optimizer = get_optimizer(
-            config["optimizer"],
-            core_model.parameters(),
-            **config["optimizer_args"]
+            config["optimizer"], core_model.parameters(), **config["optimizer_args"]
         )
         scheduler = get_lr_scheduler(
-            config.get("scheduler", None),
-            optimizer,
-            **config["scheduler_args"]
+            config.get("scheduler", None), optimizer, **config["scheduler_args"]
         )
 
         logger.debug("Creating model.")

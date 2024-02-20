@@ -71,7 +71,6 @@ def project_mesh(
     strict: bool = False,
 ):
     import numpy as np
-
     from evdplanner.cli import set_verbosity
     from evdplanner.geometry import Mesh
 
@@ -103,16 +102,17 @@ def equirectangular(
     from time import time
 
     import numpy as np
-
-    from evdplanner.markups import MarkupManager, MarkupTypes
     from evdplanner.linalg import Vec3
+    from evdplanner.markups import MarkupManager, MarkupTypes
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
     from imageio import imwrite
 
     logger = logging.getLogger(__name__)
 
-    logger.info(f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces")
+    logger.info(
+        f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and {ctx.obj['mesh'].num_triangles} faces"
+    )
     logger.debug(f"Mesh origin: {ctx.obj['mesh'].origin}")
     logger.debug(f"Theta offset: {theta_offset}")
     logger.debug(f"Output resolution: {ctx.obj['resolution']}x{ctx.obj['resolution'] // 2}")
@@ -197,8 +197,10 @@ def equirectangular(
                 logger.error(msg)
                 raise FileNotFoundError(msg)
             else:
-                logger.warning(f"File {ctx.obj['keypoints_file']} does not exist. "
-                               f"Skipping projection of keypoints.")
+                logger.warning(
+                    f"File {ctx.obj['keypoints_file']} does not exist. "
+                    f"Skipping projection of keypoints."
+                )
                 return
 
         projected_keypoints: list[dict[str, tuple[float, float]]] = []

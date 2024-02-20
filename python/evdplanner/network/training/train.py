@@ -2,26 +2,25 @@ from pathlib import Path
 from typing import Mapping
 
 import arrow
+from evdplanner.network.training import EVDPlannerDataModule, LightningWrapper
 from lightning import pytorch as pl
-
-from evdplanner.network.training import LightningWrapper, EVDPlannerDataModule
 
 
 def train_model(
-        model: LightningWrapper,
-        datamodule: EVDPlannerDataModule,
-        log_dir: Path,
-        epochs: int,
-        anatomy: str,
-        mode="train",
-        additional_callbacks: list[pl.callbacks.Callback] = None,
-        session_name: str = None,
+    model: LightningWrapper,
+    datamodule: EVDPlannerDataModule,
+    log_dir: Path,
+    epochs: int,
+    anatomy: str,
+    mode="train",
+    additional_callbacks: list[pl.callbacks.Callback] = None,
+    session_name: str = None,
 ) -> tuple[LightningWrapper, Mapping[str, float], Path]:
     from lightning.pytorch import loggers
 
     callbacks = [
-                    pl.callbacks.ModelCheckpoint(monitor="val_loss"),
-                ] + (additional_callbacks or [])
+        pl.callbacks.ModelCheckpoint(monitor="val_loss"),
+    ] + (additional_callbacks or [])
 
     if session_name:
         name = f"{mode}/{anatomy}/{model.log_name}/{session_name}"

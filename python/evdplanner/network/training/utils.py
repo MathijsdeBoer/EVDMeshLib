@@ -3,17 +3,16 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import torch
-from monai.metrics import MAEMetric, MSEMetric
-from torch import Tensor, nn, optim
-
 from evdplanner.network.training.losses import (
     MeanAbsoluteAngularError,
     MeanSquaredAngularError,
 )
+from monai.metrics import MAEMetric, MSEMetric
+from torch import Tensor, nn, optim
 
 
 def get_loss_fn(
-        loss: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
+    loss: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
 ) -> Callable[[Tensor, Tensor], Tensor]:
     if isinstance(loss, str):
         match loss.lower():
@@ -33,7 +32,7 @@ def get_loss_fn(
 
 
 def get_metric_fn(
-        metric: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
+    metric: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
 ) -> Callable[[Tensor, Tensor], Tensor]:
     if isinstance(metric, str):
         match metric.lower():
@@ -53,9 +52,9 @@ def get_metric_fn(
 
 
 def get_optimizer(
-        optimizer: optim.Optimizer | str,
-        params: Iterable[Tensor] | Iterable[dict[str, Any]],
-        **kwargs: dict[str, Any],
+    optimizer: optim.Optimizer | str,
+    params: Iterable[Tensor] | Iterable[dict[str, Any]],
+    **kwargs: dict[str, Any],
 ) -> torch.optim.Optimizer:
     if isinstance(optimizer, str):
         match optimizer.lower():
@@ -71,9 +70,9 @@ def get_optimizer(
 
 
 def get_lr_scheduler(
-        lr_scheduler: optim.lr_scheduler.LRScheduler | str | None,
-        optimizer: optim.Optimizer,
-        **kwargs,
+    lr_scheduler: optim.lr_scheduler.LRScheduler | str | None,
+    optimizer: optim.Optimizer,
+    **kwargs,
 ) -> optim.lr_scheduler.LRScheduler | None:
     if lr_scheduler is None:
         return None
@@ -98,12 +97,12 @@ def get_lr_scheduler(
 
 
 def get_data(
-        root: Path,
-        anatomy: str,
-        image_files: tuple[str] = ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png"),
-        label_file: str = "projected_{anatomy}.kp.json",
-        output_image_keys: tuple[str] = ("map_{anatomy}_depth", "map_{anatomy}_normal"),
-        output_label_key: str = "keypoints",
+    root: Path,
+    anatomy: str,
+    image_files: tuple[str] = ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png"),
+    label_file: str = "projected_{anatomy}.kp.json",
+    output_image_keys: tuple[str] = ("map_{anatomy}_depth", "map_{anatomy}_normal"),
+    output_label_key: str = "keypoints",
 ) -> tuple[list[dict[str, Path]], list[str], list[str]]:
     data = []
 
@@ -139,5 +138,3 @@ def get_data(
         data.append(sample_dict)
 
     return data, maps, keypoints
-
-

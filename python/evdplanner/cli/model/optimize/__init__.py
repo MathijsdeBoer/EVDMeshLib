@@ -106,20 +106,19 @@ def optimize(
     import lightning.pytorch as pl
     import optuna
     import torch
-    from monai.metrics import MAEMetric, MSEMetric
-    from optuna.integration import PyTorchLightningPruningCallback
-
     from evdplanner.cli import set_verbosity
-    from evdplanner.network.training import train_model
-    from evdplanner.network.training.utils import get_data
     from evdplanner.network.architecture import PointRegressor
+    from evdplanner.network.training import train_model
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
     from evdplanner.network.training.lightning_wrapper import LightningWrapper
     from evdplanner.network.training.losses import (
         MeanAbsoluteAngularError,
         MeanSquaredAngularError,
     )
+    from evdplanner.network.training.utils import get_data
     from evdplanner.network.transforms.defaults import default_load_transforms
+    from monai.metrics import MAEMetric, MSEMetric
+    from optuna.integration import PyTorchLightningPruningCallback
 
     set_verbosity(verbose)
     logger = logging.getLogger(__name__)
@@ -233,7 +232,9 @@ def optimize(
         logger.info(f"Enqueuing trial from {initial_config}.")
         with initial_config.open("r") as file:
             starting_parameters = json.load(file)
-            study.enqueue_trial(starting_parameters, user_attrs={"source": f"{initial_config.name}"})
+            study.enqueue_trial(
+                starting_parameters, user_attrs={"source": f"{initial_config.name}"}
+            )
 
     logger.info("Starting optimization.")
     study.optimize(

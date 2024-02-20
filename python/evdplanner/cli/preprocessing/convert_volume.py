@@ -30,7 +30,6 @@ def convert_volume(
 
     import numpy as np
     import SimpleITK as sitk
-
     from evdplanner.cli import set_verbosity
     from evdplanner.geometry import volume_to_mesh
 

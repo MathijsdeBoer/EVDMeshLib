@@ -196,11 +196,11 @@ class KeypointPlotCallback(pl.Callback):
                 x=[
                     y[0, keypoint, 0].cpu().numpy() * image_x,
                     y_hat[0, keypoint, 0].cpu().numpy() * image_x,
-                    ],
+                ],
                 y=[
                     y[0, keypoint, 1].cpu().numpy() * image_y,
                     y_hat[0, keypoint, 1].cpu().numpy() * image_y,
-                    ],
+                ],
                 ax=ax,
             )
 

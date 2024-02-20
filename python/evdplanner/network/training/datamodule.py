@@ -7,7 +7,6 @@ from lightning.pytorch import LightningDataModule
 from monai.data import CacheDataset
 from torch.utils.data import DataLoader, random_split
 
-
 _logger = logging.getLogger(__name__)
 
 
