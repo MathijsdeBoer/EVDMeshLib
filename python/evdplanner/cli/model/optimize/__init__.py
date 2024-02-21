@@ -237,6 +237,7 @@ def optimize(
             metrics=metrics,
             maps=maps,
             keypoints=keypoints,
+            epochs=epochs,
             in_shape=(4, resolution // 2, resolution),
             out_shape=(len(keypoints), 2),
         )
@@ -294,6 +295,12 @@ def optimize(
     )
 
     logger.info(f"Number of finished trials: {len(study.trials)}")
+
+    success_percentage = 100 * (len(study.trials) - len(study.failed_trials)) / len(study.trials)
+
+    logger.info(
+        f"Of which, {len(study.trials) - len(study.failed_trials)} ({success_percentage} %) succeeded."
+    )
     logger.info("Best trial:")
     best_trial = study.best_trial
     actual_log_dir = best_trial.user_attrs["log_dir"]

@@ -1,7 +1,7 @@
 """
 The LightningWrapper class, which is a wrapper around a PyTorch model.
 """
-from typing import Callable
+from typing import Callable, Any
 
 import lightning.pytorch as pl
 import optuna
@@ -19,6 +19,23 @@ from evdplanner.network.training.utils import (
 class LightningWrapper(pl.LightningModule):
     """
     A wrapper around a PyTorch model that is compatible with PyTorch Lightning.
+
+    Attributes
+    ----------
+    model : nn.Module | None
+        The model to wrap.
+    loss : nn.Module | Callable | None
+        The loss function to use.
+    optimizer : torch.optim.Optimizer | None
+        The optimizer to use.
+    scheduler : torch.optim.lr_scheduler.LRScheduler | None
+        The learning rate scheduler to use.
+    metrics : list[nn.Module | Callable[[Tensor, Tensor], Tensor]]
+        The metrics to use.
+    config : dict[str, Any] | None
+        The configuration of the model.
+    loggable_hparams : list[str]
+        The hyperparameters to log.
     """
 
     def __init__(self) -> None:
@@ -27,14 +44,14 @@ class LightningWrapper(pl.LightningModule):
         """
         super().__init__()
 
-        self.model = None
-        self.loss = None
+        self.model: nn.Module | None = None
+        self.loss: nn.Module | Callable | None = None
         self.optimizer: torch.optim.Optimizer | None = None
         self.scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
         self.metrics = []
 
-        self.config = None
-        self.loggable_hparams = []
+        self.config: dict[str, Any] | None = None
+        self.loggable_hparams: list[str] = []
 
     def set_input_shape(self, shape: tuple[int, ...]) -> None:
         """
@@ -98,7 +115,7 @@ class LightningWrapper(pl.LightningModule):
         model: type[OptimizableModel],
         trial: optuna.Trial,
         metrics: list[nn.Module | Callable[[Tensor, Tensor], Tensor]] | None = None,
-        **kwargs,
+        **kwargs: dict[str, any],
     ) -> "LightningWrapper":
         """
         Builds a LightningWrapper from the given Optuna trial and model.
@@ -111,7 +128,7 @@ class LightningWrapper(pl.LightningModule):
             The trial to get the parameters from.
         metrics : list[nn.Module | Callable[[Tensor, Tensor], Tensor]], optional
             The metrics to use.
-        kwargs : any
+        kwargs : dict[str, any]
             Additional keyword arguments to pass to the model.
 
         Returns
@@ -131,7 +148,7 @@ class LightningWrapper(pl.LightningModule):
             scheduler = None
         else:
             scheduler = get_lr_scheduler(
-                config["scheduler"], optimizer, **config["scheduler_args"]
+                config["scheduler"], optimizer, epochs=kwargs["epochs"], **config["scheduler_args"]
             )
 
         wrapper = cls.build_wrapper(

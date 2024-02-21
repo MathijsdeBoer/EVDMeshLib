@@ -227,7 +227,7 @@ class KeypointPlotCallback(pl.Callback):
             err_style="band",
             errorbar=("ci", 95),
         )
-        ax.set_xlabel("Step")
+        ax.set_xlabel("Epoch")
         ax.set_ylabel("Loss")
         ax.set_xlim(0, None)
         ax.set_yscale("log")
@@ -236,7 +236,7 @@ class KeypointPlotCallback(pl.Callback):
             ax2 = ax.twinx()
             sns.lineplot(
                 data=self._losses,
-                x="step",
+                x="epoch",
                 y="lr",
                 ax=ax2,
                 color="black",
