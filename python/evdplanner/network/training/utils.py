@@ -13,6 +13,7 @@ from evdplanner.network.training.losses import (
     MeanAbsoluteAngularError,
     MeanSquaredAngularError,
 )
+from evdplanner.network.training.lr_schedulers import PolyLRScheduler
 
 
 def get_loss_fn(
@@ -119,6 +120,7 @@ def get_optimizer(
 def get_lr_scheduler(
     lr_scheduler: optim.lr_scheduler.LRScheduler | str | None,
     optimizer: optim.Optimizer,
+    epochs: int,
     **kwargs: Any,
 ) -> optim.lr_scheduler.LRScheduler | None:
     """
@@ -130,6 +132,8 @@ def get_lr_scheduler(
         The learning rate scheduler.
     optimizer : optim.Optimizer
         The optimizer.
+    epochs : int
+        The number of epochs.
     kwargs : dict[str, Any]
         Additional keyword arguments for the learning rate scheduler.
 
@@ -143,16 +147,22 @@ def get_lr_scheduler(
 
     if isinstance(lr_scheduler, str):
         match lr_scheduler.lower():
-            case "step":
+            case "step" | "steplr":
                 return optim.lr_scheduler.StepLR(optimizer, **kwargs)
-            case "multistep":
+            case "multistep" | "multisteplr":
                 return optim.lr_scheduler.MultiStepLR(optimizer, **kwargs)
-            case "exponential":
+            case "exponential" | "exponentiallr":
                 return optim.lr_scheduler.ExponentialLR(optimizer, **kwargs)
-            case "cosine":
-                return optim.lr_scheduler.CosineAnnealingLR(optimizer, **kwargs)
-            case "reduceonplateau":
+            case "cosine" | "cosineannealing" | "cosineannealinglr":
+                return optim.lr_scheduler.CosineAnnealingLR(
+                    optimizer,
+                    T_max=int(epochs * kwargs.get("t_max_ratio", 1.0)),
+                    **{k: v for k, v in kwargs.items() if k != "t_max_ratio"},
+                )
+            case "reduce" | "reduceonplateau":
                 return optim.lr_scheduler.ReduceLROnPlateau(optimizer, **kwargs)
+            case "poly" | "polylr":
+                return PolyLRScheduler(optimizer, **kwargs)
             case _:
                 msg = f"Unknown lr_scheduler {lr_scheduler}"
                 raise ValueError(msg)
