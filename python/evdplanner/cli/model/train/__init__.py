@@ -238,7 +238,10 @@ def train(
             config["optimizer"], core_model.parameters(), **config["optimizer_args"]
         )
         scheduler = get_lr_scheduler(
-            config.get("scheduler", None), optimizer, **config["scheduler_args"]
+            config.get("scheduler", None),
+            optimizer,
+            epochs=epochs,
+            **config["scheduler_args"],
         )
 
         logger.debug("Creating model.")
@@ -262,7 +265,7 @@ def train(
         anatomy,
         mode="train",
         additional_callbacks=[
-            pl.callbacks.LearningRateMonitor(logging_interval="step"),
+            pl.callbacks.LearningRateMonitor(logging_interval="epoch"),
             KeypointPlotCallback(
                 filename="keypoint_plot.png",
                 log_image=True,
@@ -273,7 +276,7 @@ def train(
     )
 
     logger.info(f"Saving model to {model_path}.")
-    torch.save(model, model_path)
+    torch.save(model.model, model_path)
 
     results_path = log_dir / f"{model_path.stem}_test_results.json"
     logger.info(f"Saving test results to {results_path}.")
