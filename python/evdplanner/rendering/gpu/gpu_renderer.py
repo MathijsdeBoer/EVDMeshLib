@@ -83,7 +83,7 @@ class GPURenderer(CPURenderer):
         normals.from_numpy(np.array(norms))
 
         @ti.func
-        def spherical_to_cartesian(rho: float, theta: float, phi: float) -> ti.Vector:
+        def spherical_to_cartesian(rho, theta, phi):
             """
             Convert spherical coordinates to cartesian coordinates.
 
@@ -106,7 +106,7 @@ class GPURenderer(CPURenderer):
             z = rho * tm.cos(phi)
             return ti.Vector([x, y, z])
 
-        def generate_ray_directions() -> None:
+        def generate_ray_directions():
             """
             Generate the ray directions for the given camera.
 
@@ -117,7 +117,7 @@ class GPURenderer(CPURenderer):
             if self.camera.camera_type == CameraType.Equirectangular:
 
                 @ti.kernel
-                def generate_ray_directions_kernel() -> None:
+                def generate_ray_directions_kernel():
                     """
                     Generate the ray directions for the equirectangular camera.
 
@@ -151,13 +151,13 @@ class GPURenderer(CPURenderer):
 
         @ti.func
         def ray_triangle_intersect(
-            ray_origin: ti.Vector,
-            ray_dir: ti.Vector,
-            a: ti.Vector,
-            b: ti.Vector,
-            c: ti.Vector,
-            normal: ti.Vector,
-        ) -> tuple[bool, float]:
+            ray_origin,
+            ray_dir,
+            a,
+            b,
+            c,
+            normal,
+        ):
             """
             Check if a ray intersects a triangle.
 
@@ -212,7 +212,7 @@ class GPURenderer(CPURenderer):
             return intersect, t
 
         @ti.kernel
-        def flatten_mesh_kernel() -> None:
+        def flatten_mesh_kernel():
             """
             Flatten the mesh into a 2D array.
 

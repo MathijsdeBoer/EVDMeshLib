@@ -1,7 +1,7 @@
 """
 The LightningWrapper class, which is a wrapper around a PyTorch model.
 """
-from typing import Callable, Any
+from typing import Any, Callable
 
 import lightning.pytorch as pl
 import optuna
@@ -44,7 +44,7 @@ class LightningWrapper(pl.LightningModule):
         """
         super().__init__()
 
-        self.model: nn.Module | None = None
+        self.model: nn.Module | OptimizableModel | None = None
         self.loss: nn.Module | Callable | None = None
         self.optimizer: torch.optim.Optimizer | None = None
         self.scheduler: torch.optim.lr_scheduler.LRScheduler | None = None

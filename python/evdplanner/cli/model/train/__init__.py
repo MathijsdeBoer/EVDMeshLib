@@ -92,6 +92,11 @@ import click
     count=True,
     help="Increase verbosity. (Use multiple times for more verbosity.)",
 )
+@click.option(
+    "--plot-progress",
+    is_flag=True,
+    help="Plot progress to file and TensorBoard during training.",
+)
 def train(
     anatomy: str,
     train_root: Path,
@@ -104,6 +109,7 @@ def train(
     resolution: int = 1024,
     num_workers: int = 0,
     verbose: int = 0,
+    plot_progress: bool = False,
 ) -> None:
     """
     Train a model to predict the keypoint locations for a given anatomy.
@@ -132,6 +138,8 @@ def train(
         Number of workers for data loading.
     verbose : int, optional
         Increase verbosity. (Use multiple times for more verbosity.)
+    plot_progress : bool, optional
+        Plot progress to file and TensorBoard during training.
 
     Returns
     -------
@@ -160,7 +168,7 @@ def train(
         get_lr_scheduler,
         get_optimizer,
     )
-    from evdplanner.network.transforms.defaults import default_load_transforms
+    from evdplanner.network.transforms.defaults import default_raw_transforms
 
     set_verbosity(verbose)
     logger.info(f"Training model for {anatomy}.")
@@ -199,7 +207,7 @@ def train(
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,
-            load_transforms=default_load_transforms(maps, keypoints),
+            load_transforms=default_raw_transforms(maps, keypoints),
             batch_size=config["batch_size"],
             num_workers=num_workers,
         )
@@ -257,6 +265,22 @@ def train(
         model.set_input_shape((1, 4, resolution // 2, resolution))
 
     logger.info("Training model.")
+
+    callbacks = [
+        pl.callbacks.LearningRateMonitor(logging_interval="epoch"),
+    ]
+
+    if plot_progress:
+        logger.debug("Adding plot progress callback.")
+        callbacks.append(
+            KeypointPlotCallback(
+                filename="keypoint_plot.png",
+                log_image=True,
+                log_loss=True,
+                log_lr=True,
+            ),
+        )
+
     model, test_loss, _ = train_model(
         model,
         dm,
@@ -264,15 +288,7 @@ def train(
         epochs,
         anatomy,
         mode="train",
-        additional_callbacks=[
-            pl.callbacks.LearningRateMonitor(logging_interval="epoch"),
-            KeypointPlotCallback(
-                filename="keypoint_plot.png",
-                log_image=True,
-                log_loss=True,
-                log_lr=True,
-            ),
-        ],
+        additional_callbacks=callbacks,
     )
 
     logger.info(f"Saving model to {model_path}.")

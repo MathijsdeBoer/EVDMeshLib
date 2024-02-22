@@ -158,7 +158,7 @@ class DisplaySettings:
             "glyphSize": self.glyph_size,
             "sliceProjection": self.slice_projection,
             "sliceProjectionUseFiducialColor": self.slice_projection_use_fiducial_color,
-            "sliceProjectionOutlinedBehindSlicePlane": self.slice_projection_outlined_behind_slice,
+            "sliceProjectionOutlinedBehindSlicePlane": self.slice_projection_outlined_behind_slice_plane,
             "sliceProjectionColor": self.slice_projection_color,
             "sliceProjectionOpacity": self.slice_projection_opacity,
             "lineThickness": self.line_thickness,

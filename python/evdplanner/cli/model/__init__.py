@@ -5,6 +5,7 @@ Model commands.
 import click
 
 from evdplanner.cli.model.optimize import optimize
+from evdplanner.cli.model.predict import predict_skin_mesh
 from evdplanner.cli.model.train import train
 
 
@@ -21,4 +22,5 @@ def model() -> None:
 
 
 model.add_command(train)
+model.add_command(predict_skin_mesh)
 model.add_command(optimize)

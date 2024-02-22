@@ -1,7 +1,11 @@
 """
 Mirror Transform.
 """
+import random
+from typing import Sequence
+
 import monai.transforms as mt
+import torch
 
 
 class MirrorTransform(mt.MapTransform, mt.InvertibleTransform):
@@ -10,7 +14,7 @@ class MirrorTransform(mt.MapTransform, mt.InvertibleTransform):
     """
 
     def __init__(
-        self, keys: list[str], image_key: str = "image", label_key: str = "label"
+        self, keys: list[str], image_key: str = "image", label_key: str = "label", keypoint_pairs: Sequence[tuple[int, int]] = None, mirrorable_axes: Sequence[int] = None
     ) -> None:
         """
         Initialize the transform.
@@ -27,6 +31,8 @@ class MirrorTransform(mt.MapTransform, mt.InvertibleTransform):
         super().__init__(keys)
         self.image_key = image_key
         self.label_key = label_key
+        self.keypoint_pairs = keypoint_pairs
+        self.mirrorable_axes = mirrorable_axes
 
     def __call__(self, data: dict) -> dict:
         """
@@ -42,4 +48,20 @@ class MirrorTransform(mt.MapTransform, mt.InvertibleTransform):
         dict
             The output dictionary.
         """
-        raise NotImplementedError
+        d = dict(data)
+
+        axes_to_mirror = random.choice(self.mirrorable_axes)
+
+        for key in self.key_iterator(d):
+            if key == self.image_key:
+                d[key] = torch.flip(d[key], [axes_to_mirror])
+
+            if key == self.label_key:
+                d[key][axes_to_mirror + 2] = 1 - d[key][axes_to_mirror + 2]
+
+                for pair in self.keypoint_pairs:
+                    tmp = d[key][:, :, pair[0]]
+                    d[key][:, :, pair[0]] = d[key][:, :, pair[1]]
+                    d[key][:, :, pair[1]] = tmp
+
+        return d

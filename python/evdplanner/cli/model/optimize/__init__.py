@@ -123,11 +123,11 @@ def optimize(
         Path to initial configuration file.
     seed : int, optional
         Seed for random number generator.
-    resolution : int
+    resolution : int, optional
         Resolution of input images.
-    num_workers : int
+    num_workers : int, optional
         Number of workers for data loading.
-    verbose : int
+    verbose : int, optional
         Increase verbosity. (Use multiple times for more verbosity.)
 
     Returns
@@ -155,7 +155,7 @@ def optimize(
         MeanSquaredAngularError,
     )
     from evdplanner.network.training.utils import get_data
-    from evdplanner.network.transforms.defaults import default_load_transforms
+    from evdplanner.network.transforms.defaults import default_raw_transforms
 
     set_verbosity(verbose)
 
@@ -202,7 +202,7 @@ def optimize(
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,
-            load_transforms=default_load_transforms(maps, keypoints),
+            load_transforms=default_raw_transforms(maps, keypoints),
             batch_size=batch_size,
             num_workers=num_workers,
         )

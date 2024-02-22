@@ -106,7 +106,7 @@ class Markup:
             The dictionary representation of the markup.
         """
         return {
-            "type": self.markup_type,
+            "type": self.markup_type.value,
             "coordinateSystem": "LPS",
             "coordinateUnits": "mm",
             "locked": True,

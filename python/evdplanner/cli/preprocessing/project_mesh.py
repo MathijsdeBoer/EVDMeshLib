@@ -131,7 +131,7 @@ def equirectangular(
     from time import time
 
     import numpy as np
-    from imageio import imwrite
+    from imageio.v3 import imwrite
     from loguru import logger
 
     from evdplanner.linalg import Vec3
