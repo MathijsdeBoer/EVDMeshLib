@@ -48,6 +48,15 @@ import click
     help="Number of epochs to train.",
 )
 @click.option(
+    "--val",
+    "val_root",
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    help="Root directory containing validation data.",
+)
+@click.option(
     "--test",
     "test_root",
     type=click.Path(
@@ -103,6 +112,7 @@ def optimize(
     log_dir: Path,
     n_trials: int,
     epochs: int = 100,
+    val_root: Path | None = None,
     test_root: Path | None = None,
     initial_config: Path | None = None,
     seed: int | None = None,
@@ -120,6 +130,8 @@ def optimize(
         Anatomy to train on.
     train_root : Path
         Root directory containing training data.
+    val_root : Path
+        Root directory containing validation data.
     log_dir : Path
         Directory to store logs.
     n_trials : int
@@ -147,6 +159,7 @@ def optimize(
     """
     import json
     from math import pi
+    from random import sample
 
     import arrow
     import lightning.pytorch as pl
@@ -172,6 +185,9 @@ def optimize(
 
     logger.info(f"Training on {anatomy} data.")
 
+    if seed:
+        pl.seed_everything(seed)
+
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
@@ -181,6 +197,14 @@ def optimize(
         anatomy,
         output_label_key="keypoints",
     )
+
+    if val_root:
+        logger.info(f"Collecting data from {val_root}.")
+        val_samples, _, _ = get_data(val_root, anatomy)
+    else:
+        logger.warning("No validation data provided. Using 20% of training data for validation.")
+        val_samples = sample(train_samples, int(0.2 * len(train_samples)))
+
     if test_root:
         logger.info(f"Collecting data from {test_root}.")
         test_samples, _, _ = get_data(test_root, anatomy)
@@ -226,6 +250,7 @@ def optimize(
 
         dm = EVDPlannerDataModule(
             train_samples=train_samples,
+            val_samples=val_samples,
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,

@@ -8,7 +8,7 @@ import monai.transforms as mt
 from lightning.pytorch import LightningDataModule
 from loguru import logger
 from monai.data import CacheDataset
-from torch.utils.data import ConcatDataset, DataLoader, random_split
+from torch.utils.data import ConcatDataset, DataLoader
 
 
 def validate_samples(
@@ -83,13 +83,13 @@ class EVDPlannerDataModule(LightningDataModule):
     def __init__(
         self,
         train_samples: list[dict],
+        val_samples: list[dict],
         maps: list[str],
         keypoints_key: str,
         test_samples: list[dict] = None,
         augmented_samples: list[dict] = None,
         load_transforms: list[mt.Transform] = None,
         augment_transforms: list[mt.Transform] = None,
-        val_split: float = 0.2,
         batch_size: int = 1,
         num_workers: int = 0,
     ) -> None:
@@ -100,6 +100,8 @@ class EVDPlannerDataModule(LightningDataModule):
         ----------
         train_samples : list[dict]
             List of training samples.
+        val_samples : list[dict]
+            List of validation samples.
         maps : list[str]
             List of map keys.
         keypoints_key : str
@@ -110,8 +112,6 @@ class EVDPlannerDataModule(LightningDataModule):
             List of transforms to load the data, by default None
         augment_transforms : list[mt.Transform], optional
             List of transforms to augment the data, by default None
-        val_split : float, optional
-            Validation split, by default 0.2
         batch_size : int, optional
             Batch size, by default 1
         num_workers : int, optional
@@ -123,14 +123,12 @@ class EVDPlannerDataModule(LightningDataModule):
 
         super().__init__()
         self.train_samples = train_samples
+        self.val_samples = val_samples
         self.test_samples = test_samples
         self.augmented_samples = augmented_samples
 
         self.load_transforms = load_transforms or []
         self.augment_transforms = augment_transforms or []
-
-        self.train_split = 1.0 - val_split
-        self.val_split = val_split
 
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -153,12 +151,14 @@ class EVDPlannerDataModule(LightningDataModule):
         -------
         None
         """
-        self.train_data, self.val_data = random_split(
-            CacheDataset(
-                self.train_samples,
-                transform=mt.Compose(self.load_transforms + self.augment_transforms),
-            ),
-            [self.train_split, self.val_split],
+        self.train_data = CacheDataset(
+            self.train_samples,
+            transform=mt.Compose(self.load_transforms + self.augment_transforms),
+        )
+
+        self.val_data = CacheDataset(
+            self.val_samples,
+            transform=mt.Compose(self.load_transforms),
         )
 
         if self.augmented_samples:

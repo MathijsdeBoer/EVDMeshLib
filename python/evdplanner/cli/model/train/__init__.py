@@ -59,6 +59,15 @@ import click
     help="Number of epochs to train.",
 )
 @click.option(
+    "--augmented",
+    "augment_root",
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    help="Root directory containing ahead-of-time augmented data for training.",
+)
+@click.option(
     "--test",
     "test_root",
     type=click.Path(
@@ -97,7 +106,7 @@ import click
     help="Plot progress to file and TensorBoard during training.",
 )
 @click.option(
-    "--augment",
+    "--train-augment",
     "use_augmentations",
     is_flag=True,
     help="Use augmentations during training.",
@@ -117,6 +126,8 @@ def train(
     log_dir: Path,
     model_path: Path,
     epochs: int = 100,
+    augment_root: Path | None = None,
+    val_root: Path | None = None,
     test_root: Path | None = None,
     seed: int | None = None,
     resolution: int = 1024,
@@ -143,6 +154,10 @@ def train(
         Path to store trained model.
     epochs : int
         Number of epochs to train.
+    augment_root : Path, optional
+        Root directory containing augmented training data.
+    val_root : Path, optional
+        Root directory containing validation data.
     test_root : Path, optional
         Root directory containing test data.
     seed : int, optional
@@ -166,6 +181,7 @@ def train(
     """
     import json
     from math import pi
+    from random import sample
 
     import lightning.pytorch as pl
     import torch
@@ -211,6 +227,14 @@ def train(
         anatomy,
         output_label_key="keypoints",
     )
+
+    if val_root:
+        logger.info(f"Collecting data from {val_root}.")
+        val_samples, _, _ = get_data(val_root, anatomy)
+    else:
+        logger.warning("No validation data provided. Using 20% of training data for validation.")
+        val_samples = sample(train_samples, int(0.2 * len(train_samples)))
+
     if test_root:
         logger.info(f"Collecting data from {test_root}.")
         test_samples, _, _ = get_data(test_root, anatomy)
@@ -243,6 +267,7 @@ def train(
 
         dm = EVDPlannerDataModule(
             train_samples=train_samples,
+            val_samples=val_samples,
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,
