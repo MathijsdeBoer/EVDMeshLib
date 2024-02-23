@@ -1,10 +1,10 @@
 """
 Custom Transforms for loading data.
 """
-from .defaults import default_raw_transforms
+from .defaults import default_load_transforms
 from .json_keypoint_loader import JsonKeypointLoaderd
 
 __all__ = [
-    "default_raw_transforms",
+    "default_load_transforms",
     "JsonKeypointLoaderd",
 ]

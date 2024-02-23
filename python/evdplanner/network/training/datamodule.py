@@ -8,7 +8,7 @@ import monai.transforms as mt
 from lightning.pytorch import LightningDataModule
 from loguru import logger
 from monai.data import CacheDataset
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import ConcatDataset, DataLoader, random_split
 
 
 def validate_samples(
@@ -86,6 +86,7 @@ class EVDPlannerDataModule(LightningDataModule):
         maps: list[str],
         keypoints_key: str,
         test_samples: list[dict] = None,
+        augmented_samples: list[dict] = None,
         load_transforms: list[mt.Transform] = None,
         augment_transforms: list[mt.Transform] = None,
         val_split: float = 0.2,
@@ -123,6 +124,7 @@ class EVDPlannerDataModule(LightningDataModule):
         super().__init__()
         self.train_samples = train_samples
         self.test_samples = test_samples
+        self.augmented_samples = augmented_samples
 
         self.load_transforms = load_transforms or []
         self.augment_transforms = augment_transforms or []
@@ -134,6 +136,7 @@ class EVDPlannerDataModule(LightningDataModule):
         self.num_workers = num_workers
 
         self.train_data = None
+        self.augmented_data = None
         self.val_data = None
         self.test_data = None
 
@@ -157,6 +160,13 @@ class EVDPlannerDataModule(LightningDataModule):
             ),
             [self.train_split, self.val_split],
         )
+
+        if self.augmented_samples:
+            self.augmented_data = CacheDataset(
+                self.augmented_samples,
+                transform=mt.Compose(self.load_transforms + self.augment_transforms),
+            )
+
         if self.test_samples:
             self.test_data = CacheDataset(
                 self.test_samples,
@@ -172,13 +182,22 @@ class EVDPlannerDataModule(LightningDataModule):
         DataLoader
             Train dataloader.
         """
-        return DataLoader(
-            self.train_data,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            shuffle=True,
-            persistent_workers=self.num_workers > 0,
-        )
+        if self.augmented_data:
+            return DataLoader(
+                ConcatDataset([self.train_data, self.augmented_data]),
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                shuffle=True,
+                persistent_workers=self.num_workers > 0,
+            )
+        else:
+            return DataLoader(
+                self.train_data,
+                batch_size=self.batch_size,
+                num_workers=self.num_workers,
+                shuffle=True,
+                persistent_workers=self.num_workers > 0,
+            )
 
     def val_dataloader(self) -> DataLoader:
         """

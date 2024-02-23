@@ -14,7 +14,12 @@ class MirrorTransform(mt.MapTransform, mt.InvertibleTransform):
     """
 
     def __init__(
-        self, keys: list[str], image_key: str = "image", label_key: str = "label", keypoint_pairs: Sequence[tuple[int, int]] = None, mirrorable_axes: Sequence[int] = None
+        self,
+        keys: list[str],
+        image_key: str = "image",
+        label_key: str = "label",
+        keypoint_pairs: Sequence[tuple[int, int]] = None,
+        mirrorable_axes: Sequence[int] = None,
     ) -> None:
         """
         Initialize the transform.

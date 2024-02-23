@@ -2,7 +2,6 @@
 Train a model to predict the keypoint locations for a given anatomy.
 """
 
-from math import pi
 from pathlib import Path
 
 import click
@@ -97,6 +96,20 @@ import click
     is_flag=True,
     help="Plot progress to file and TensorBoard during training.",
 )
+@click.option(
+    "--augment",
+    "use_augmentations",
+    is_flag=True,
+    help="Use augmentations during training.",
+)
+@click.option(
+    "--final-bias",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    help="Path to a file containing the initial weights for the final layer.",
+)
 def train(
     anatomy: str,
     train_root: Path,
@@ -110,6 +123,8 @@ def train(
     num_workers: int = 0,
     verbose: int = 0,
     plot_progress: bool = False,
+    use_augmentations: bool = False,
+    final_bias: Path | None = None,
 ) -> None:
     """
     Train a model to predict the keypoint locations for a given anatomy.
@@ -140,12 +155,17 @@ def train(
         Increase verbosity. (Use multiple times for more verbosity.)
     plot_progress : bool, optional
         Plot progress to file and TensorBoard during training.
+    use_augmentations : bool, optional
+        Use augmentations during training.
+    final_bias : Path, optional
+        Path to a file containing the initial weights for the final layer.
 
     Returns
     -------
     None
     """
     import json
+    from math import pi
 
     import lightning.pytorch as pl
     import torch
@@ -154,10 +174,10 @@ def train(
 
     from evdplanner.cli import set_verbosity
     from evdplanner.network.architecture import PointRegressor
+    from evdplanner.network.lightning_wrapper import LightningWrapper
     from evdplanner.network.training import train_model
     from evdplanner.network.training.callbacks import KeypointPlotCallback
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
-    from evdplanner.network.training.lightning_wrapper import LightningWrapper
     from evdplanner.network.training.losses import (
         MeanAbsoluteAngularError,
         MeanSquaredAngularError,
@@ -168,7 +188,10 @@ def train(
         get_lr_scheduler,
         get_optimizer,
     )
-    from evdplanner.network.transforms.defaults import default_raw_transforms
+    from evdplanner.network.transforms.defaults import (
+        default_augment_transforms,
+        default_load_transforms,
+    )
 
     set_verbosity(verbose)
     logger.info(f"Training model for {anatomy}.")
@@ -195,6 +218,22 @@ def train(
         logger.info("No test data provided. Using validation data for testing.")
         test_samples = None
 
+    if final_bias and final_bias.exists():
+        logger.info(f"Loading initial weights for final layer from {final_bias}.")
+        with final_bias.open('r') as file:
+            final_bias = json.load(file)
+
+        bias = []
+        for key in keypoints:
+            for b in final_bias:
+                if b["label"] == key:
+                    bias.append(b["position"])
+                    break
+        final_bias = bias
+    elif final_bias:
+        logger.warning(f"File {final_bias} does not exist. Ignoring.")
+        final_bias = None
+
     with config.open("r") as file:
         logger.info(f"Loading configuration from {config}.")
         config = json.load(file)
@@ -207,25 +246,22 @@ def train(
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,
-            load_transforms=default_raw_transforms(maps, keypoints),
+            load_transforms=default_load_transforms(maps, keypoints),
+            augment_transforms=default_augment_transforms() if use_augmentations else None,
             batch_size=config["batch_size"],
             num_workers=num_workers,
         )
 
-        core_model = PointRegressor.from_optuna_parameters(
-            config,
-            maps=maps,
-            keypoints=keypoints,
-            in_shape=(4, resolution // 2, resolution),
-            out_shape=(len(keypoints), 2),
-        )
-
         if anatomy == "skin":
             logger.debug("Setting ranges for skin.")
+            x_resolution = resolution
+            y_resolution = resolution // 2
             x_range = (0.0, 2.0 * pi)
             y_range = (0.0, pi)
         elif anatomy == "ventricles":
             logger.debug("Setting ranges for ventricles.")
+            x_resolution = resolution
+            y_resolution = resolution
             x_range = (0.0, 1.0)
             y_range = (0.0, 1.0)
         else:
@@ -239,18 +275,29 @@ def train(
             MeanSquaredAngularError(x_range=x_range, y_range=y_range),
             MeanAbsoluteAngularError(x_range=x_range, y_range=y_range),
         ]
-
         logger.debug(f"Using metrics: {metrics}")
+
+        core_model = PointRegressor.from_optuna_parameters(
+            config,
+            maps=maps,
+            keypoints=keypoints,
+            in_shape=(4, x_resolution, y_resolution),
+            out_shape=(len(keypoints), 2),
+            final_bias=final_bias,
+        )
 
         optimizer = get_optimizer(
             config["optimizer"], core_model.parameters(), **config["optimizer_args"]
         )
-        scheduler = get_lr_scheduler(
-            config.get("scheduler", None),
-            optimizer,
-            epochs=epochs,
-            **config["scheduler_args"],
-        )
+        if "scheduler" in config:
+            scheduler = get_lr_scheduler(
+                config.get("scheduler", None),
+                optimizer,
+                epochs=epochs,
+                **config["scheduler_args"],
+            )
+        else:
+            scheduler = None
 
         logger.debug("Creating model.")
         model = LightningWrapper.build_wrapper(
@@ -261,8 +308,10 @@ def train(
             metrics=metrics,
             config=config,
         )
-        logger.debug(f"Setting input shape to (1, 4, {resolution // 2}, {resolution}).")
-        model.set_input_shape((1, 4, resolution // 2, resolution))
+        logger.debug(f"Setting input shape to (1, 4, {x_resolution}, {y_resolution}).")
+        model.set_input_shape((1, 4, x_resolution, y_resolution))
+
+        model.loggable_hparams = core_model.loggable_parameters()
 
     logger.info("Training model.")
 
@@ -294,7 +343,7 @@ def train(
     logger.info(f"Saving model to {model_path}.")
     torch.save(model.model, model_path)
 
-    results_path = log_dir / f"{model_path.stem}_test_results.json"
+    results_path = model_path.parent / f"{model_path.stem}_test_results.json"
     logger.info(f"Saving test results to {results_path}.")
     with results_path.open("w") as file:
         json.dump(test_loss, file, indent=4)

@@ -89,6 +89,14 @@ import click
     count=True,
     help="Increase verbosity. (Use multiple times for more verbosity.)",
 )
+@click.option(
+    "--final-bias",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    help="Path to a file containing the initial weights for the final layer.",
+)
 def optimize(
     anatomy: str,
     train_root: Path,
@@ -101,6 +109,7 @@ def optimize(
     resolution: int = 1024,
     num_workers: int = 0,
     verbose: int = 0,
+    final_bias: Path | None = None,
 ) -> None:
     """
     Optimize a point regressor model for a given anatomy using optuna.
@@ -129,6 +138,8 @@ def optimize(
         Number of workers for data loading.
     verbose : int, optional
         Increase verbosity. (Use multiple times for more verbosity.)
+    final_bias : Path, optional
+        Path to a file containing the initial weights for the final layer.
 
     Returns
     -------
@@ -147,15 +158,15 @@ def optimize(
 
     from evdplanner.cli import set_verbosity
     from evdplanner.network.architecture import PointRegressor
+    from evdplanner.network.lightning_wrapper import LightningWrapper
     from evdplanner.network.training import train_model
     from evdplanner.network.training.datamodule import EVDPlannerDataModule
-    from evdplanner.network.training.lightning_wrapper import LightningWrapper
     from evdplanner.network.training.losses import (
         MeanAbsoluteAngularError,
         MeanSquaredAngularError,
     )
     from evdplanner.network.training.utils import get_data
-    from evdplanner.network.transforms.defaults import default_raw_transforms
+    from evdplanner.network.transforms.defaults import default_load_transforms, default_augment_transforms
 
     set_verbosity(verbose)
 
@@ -176,6 +187,22 @@ def optimize(
     else:
         logger.warning("No test data provided. Using validation data for testing.")
         test_samples = None
+
+    if final_bias and final_bias.exists():
+        logger.info(f"Loading initial weights for final layer from {final_bias}.")
+        with final_bias.open('r') as file:
+            final_bias = json.load(file)
+
+        bias = []
+        for key in keypoints:
+            for b in final_bias:
+                if b["label"] == key:
+                    bias.append(b["position"])
+                    break
+        final_bias = bias
+    elif final_bias:
+        logger.warning(f"File {final_bias} does not exist. Ignoring.")
+        final_bias = None
 
     def _objective(trial: optuna.Trial) -> float:
         """
@@ -202,17 +229,22 @@ def optimize(
             maps=maps,
             keypoints_key="keypoints",
             test_samples=test_samples,
-            load_transforms=default_raw_transforms(maps, keypoints),
+            load_transforms=default_load_transforms(maps, keypoints),
+            augment_transforms=default_augment_transforms(),
             batch_size=batch_size,
             num_workers=num_workers,
         )
 
         if anatomy == "skin":
             logger.debug("Setting ranges for skin.")
+            x_resolution = resolution
+            y_resolution = resolution // 2
             x_range = (0.0, 2.0 * pi)
             y_range = (0.0, pi)
         elif anatomy == "ventricles":
             logger.debug("Setting ranges for ventricles.")
+            x_resolution = resolution
+            y_resolution = resolution
             x_range = (0.0, 1.0)
             y_range = (0.0, 1.0)
         else:
@@ -238,27 +270,32 @@ def optimize(
             maps=maps,
             keypoints=keypoints,
             epochs=epochs,
-            in_shape=(4, resolution // 2, resolution),
+            in_shape=(4, x_resolution, y_resolution),
             out_shape=(len(keypoints), 2),
+            final_bias=final_bias,
         )
-        logger.debug(f"Setting input shape to (1, 4, {resolution // 2}, {resolution}).")
-        model.set_input_shape((1, 4, resolution // 2, resolution))
+        logger.debug(f"Setting input shape to (1, 4, {x_resolution}, {y_resolution}).")
+        model.set_input_shape((1, 4, x_resolution, y_resolution))
 
         logger.info("Training model.")
-        model, test_loss, output_log_dir = train_model(
-            model,
-            dm,
-            log_dir,
-            epochs,
-            anatomy,
-            mode="optimize",
-            additional_callbacks=[
-                PyTorchLightningPruningCallback(
-                    trial, monitor=f"hp/{metrics[0].__class__.__name__}"
-                ),
-            ],
-            session_name=arrow.now().format("YYYY-MM-DD"),
-        )
+        try:
+            model, test_loss, output_log_dir = train_model(
+                model,
+                dm,
+                log_dir,
+                epochs,
+                anatomy,
+                mode="optimize",
+                additional_callbacks=[
+                    PyTorchLightningPruningCallback(
+                        trial, monitor=f"hp/{metrics[0].__class__.__name__}"
+                    ),
+                ],
+                session_name=arrow.now().format("YYYY-MM-DD"),
+            )
+        except Exception:
+            logger.exception("Training failed.")
+            raise optuna.TrialPruned()
 
         model.config["batch_size"] = batch_size
         trial.set_user_attr("model_config", model.config)

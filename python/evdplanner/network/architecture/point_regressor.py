@@ -6,6 +6,7 @@ from typing import Any, Callable, Sequence
 
 import optuna
 import torch
+from loguru import logger
 from monai.networks.blocks import ConvDenseBlock, Convolution
 from monai.networks.layers import Act, Flatten, Norm, Reshape, get_act_layer
 from monai.networks.nets import Regressor
@@ -76,6 +77,7 @@ class PointRegressor(Regressor, OptimizableModel):
         norm: nn.Module | Callable | str = Norm.INSTANCE,
         dropout: float | None = None,
         bias: bool = True,
+        final_bias: float | tuple[float, float] | Sequence[tuple[float, float]] | None = None,
     ) -> None:
         """
         Initializes the PointRegressor model.
@@ -108,7 +110,13 @@ class PointRegressor(Regressor, OptimizableModel):
             The dropout rate to use, by default None.
         bias : bool, optional
             Whether to use bias in the convolutional layers, by default True.
+        final_bias : float | tuple[float, float] | Sequence[tuple[float, float]] | None, optional
+            The bias to use in the final linear layer, by default None.
         """
+        logger.debug(f"Creating PointRegressor with in_shape={in_shape}, out_shape={out_shape}")
+        self.final_bias = final_bias
+        logger.debug(f"Using final_bias={self.final_bias}")
+
         super().__init__(
             in_shape=in_shape,
             out_shape=out_shape,
@@ -124,6 +132,7 @@ class PointRegressor(Regressor, OptimizableModel):
 
         self.maps = maps
         self.keypoints = keypoints
+        logger.debug(f"Using maps={self.maps}, keypoints={self.keypoints}")
 
         self.final_act = final_act
         if isinstance(self.final_act, str):
@@ -167,7 +176,7 @@ class PointRegressor(Regressor, OptimizableModel):
     def _get_final_layer(self, in_shape: Sequence[int]) -> nn.Sequential:
         point_paths = []
 
-        for _ in range(self.out_shape[0]):
+        for i in range(self.out_shape[0]):
             convolution = Convolution(
                 spatial_dims=self.dimensions,
                 in_channels=in_shape[0],
@@ -185,6 +194,26 @@ class PointRegressor(Regressor, OptimizableModel):
                 out_features=self.out_shape[1],
             )
 
+            if self.final_bias:
+                if isinstance(self.final_bias, (int, float)):
+                    logger.debug(f"Setting final_bias={self.final_bias}")
+                    linear.bias.data.fill_(self.final_bias)
+                elif isinstance(self.final_bias, Sequence):
+                    if len(self.final_bias) == self.out_shape[1]:
+                        logger.debug(f"Setting final_bias={self.final_bias}")
+                        linear.bias.data = nn.Parameter(torch.tensor(self.final_bias))
+                    elif len(self.final_bias) == self.out_shape[0]:
+                        logger.debug(f"Setting output layer {i} final_bias={self.final_bias[i]}")
+                        linear.bias.data = nn.Parameter(torch.tensor(self.final_bias[i]))
+                    else:
+                        msg = ("final_bias must have the same length as the number of keypoints,"
+                               " the number of dimensions, or be a single float.")
+                        logger.error(msg)
+                        raise ValueError(msg)
+                else:
+                    msg = "final_bias must be a float, tuple of floats, or a sequence of tuples of floats."
+                    logger.error(msg)
+                    raise ValueError(msg)
             point_paths.append(nn.Sequential(convolution, Flatten(), linear))
 
         return nn.Sequential(ParallelConcat(point_paths), Reshape(*self.out_shape))
@@ -346,6 +375,7 @@ class PointRegressor(Regressor, OptimizableModel):
             norm=parameters.get("norm_fn", Norm.INSTANCE),
             dropout=parameters["dropout"],
             bias=True,
+            final_bias=kwargs.get("final_bias", None),
         )
 
         return result

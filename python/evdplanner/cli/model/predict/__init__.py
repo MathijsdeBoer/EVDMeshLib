@@ -80,8 +80,8 @@ def predict_skin_mesh(
 
     import numpy as np
     import torch
-    from loguru import logger
     from imageio.v3 import imwrite
+    from loguru import logger
     from monai.transforms import Compose
 
     from evdplanner.cli import set_verbosity
@@ -89,8 +89,8 @@ def predict_skin_mesh(
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager
     from evdplanner.network import PointRegressor
-    from evdplanner.network.training import LightningWrapper
-    from evdplanner.network.transforms import default_raw_transforms
+    from evdplanner.network.training import LightningWrapper, OptimizableModel
+    from evdplanner.network.transforms import default_load_transforms
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
@@ -105,10 +105,11 @@ def predict_skin_mesh(
 
     logger.info("Loading model...")
     device = torch.device("cuda" if gpu_model else "cpu")
-    model: PointRegressor = torch.load(model_path, map_location=device)
-    model.eval()
-
+    model: OptimizableModel = torch.load(model_path, map_location=device)
     resolution = model.in_shape
+
+    model: LightningWrapper = LightningWrapper(model)
+    model.eval()
 
     logger.debug(f"Model resolution: {resolution}")
     logger.info("Loading mesh...")
@@ -119,8 +120,8 @@ def predict_skin_mesh(
         origin=mesh.origin,
         forward=Vec3(0.0, -1.0, 0.0),
         up=Vec3(0.0, 0.0, 1.0),
-        x_resolution=resolution[1],
-        y_resolution=resolution[0],
+        x_resolution=resolution[0],
+        y_resolution=resolution[1],
         camera_type=CameraType.Equirectangular,
     )
 
@@ -140,35 +141,23 @@ def predict_skin_mesh(
 
     logger.debug("Normalizing images...")
     depth_image = normalize_image(depth_image)
-    normal_image += 1.0
-    normal_image /= 2.0
+    depth_image = depth_image[..., np.newaxis]
+    normal_image = normalize_image(normal_image, lower_percentile=0.0, upper_percentile=100.0)
 
-    logger.debug("Converting images to uint16 and uint8...")
-    depth_image = (depth_image * 65535).astype(np.uint16)
-    normal_image = (normal_image * 255).astype(np.uint8)
+    image = np.concatenate([depth_image, normal_image], axis=-1)
+    logger.debug(f"Image shape: {image.shape}")
+    image = np.transpose(image, (2, 1, 0))
+    logger.debug(f"Image shape: {image.shape}")
 
-    depth_output = output_path.parent / f"{output_path.stem}_depth.png"
-    logger.info(f"Saving to {depth_output}")
-    imwrite(depth_output, depth_image)
-
-    normal_output = output_path.parent / f"{output_path.stem}_normal.png"
-    logger.info(f"Saving to {normal_output}")
-    imwrite(normal_output, normal_image)
+    # Normalize the image to [-1, 1] range.
+    image *= 2
+    image -= 1
 
     logger.debug(f"Image shape: {image.shape}, dtype: {image.dtype}")
 
-    transforms = default_raw_transforms(
-        maps=model.maps,
-        keypoints=model.keypoints,
-        allow_missing_keys=True,
-    )
-    transforms = Compose(transforms)
-
-    logger.info("Applying transforms...")
-    image = transforms({
-        map_name: im for map_name, im in zip(model.maps, [depth_output, normal_output])
-    })["image"]
+    image = torch.from_numpy(image).float()
     image = image.to(device)
+    image = image.unsqueeze(0)
     logger.debug(f"Transformed image shape: {image.shape}, dtype: {image.dtype}")
 
     logger.info("Predicting...")
@@ -176,7 +165,7 @@ def predict_skin_mesh(
         prediction = model(image).squeeze().cpu().numpy()
     logger.debug(f"Prediction: {prediction}")
 
-    keypoints = model.keypoints
+    keypoints = model.model.keypoints
     logger.debug(f"Keypoints: {keypoints}")
 
     intersections = []

@@ -6,6 +6,7 @@ from typing import Any, Callable
 import lightning.pytorch as pl
 import optuna
 import torch
+from loguru import logger
 from torch import Tensor, nn
 
 from evdplanner.network.training.optimizable_model import OptimizableModel
@@ -38,13 +39,13 @@ class LightningWrapper(pl.LightningModule):
         The hyperparameters to log.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model: nn.Module | OptimizableModel = None) -> None:
         """
         Initializes the LightningWrapper.
         """
         super().__init__()
 
-        self.model: nn.Module | OptimizableModel | None = None
+        self.model: nn.Module | OptimizableModel | None = model
         self.loss: nn.Module | Callable | None = None
         self.optimizer: torch.optim.Optimizer | None = None
         self.scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
@@ -209,8 +210,11 @@ class LightningWrapper(pl.LightningModule):
         params = {}
 
         params["model"] = {}
+        logger.debug("Logging hyperparameters.")
+        logger.debug(f"Using {self.loggable_hparams} as loggable hyperparameters.")
         for key, value in self.config.items():
             if key in self.loggable_hparams:
+                logger.debug(f"Logging hyperparameter {key} with value {value}.")
                 params["model"][key] = value
         params["model"]["name"] = self.model.__class__.__name__
         params["model"]["input_shape"] = self.example_input_array.shape[1:]
@@ -226,10 +230,6 @@ class LightningWrapper(pl.LightningModule):
         if self.scheduler is not None:
             params["scheduler"] = {}
             params["scheduler"]["name"] = self.scheduler.__class__.__name__
-
-            for key, value in self.scheduler.__dict__.items():
-                if key in self.loggable_hparams:
-                    params["scheduler"][key] = value
 
         self.logger.log_hyperparams(
             params, {f"hp/{x.__class__.__name__}": float("inf") for x in self.metrics}
@@ -340,6 +340,9 @@ class LightningWrapper(pl.LightningModule):
 
         self.log_dict(output, prog_bar=True, batch_size=x.shape[0], on_step=False, on_epoch=True)
         return output
+
+    def predict_step(self, batch: dict[str, Tensor], batch_dix: int) -> Tensor:
+        return self(batch["image"])
 
     @property
     def log_name(self) -> str:
