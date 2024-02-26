@@ -7,6 +7,8 @@ import sys
 import click
 from loguru import logger
 
+from evdplanner.cli.augment import augment
+from evdplanner.cli.generate import generate
 from evdplanner.cli.model import model
 from evdplanner.cli.plan import plan
 from evdplanner.cli.plot import plot
@@ -29,6 +31,8 @@ def cli() -> None:
 
 
 # Add the commands to the CLI group
+cli.add_command(augment)
+cli.add_command(generate)
 cli.add_command(model)
 cli.add_command(plan)
 cli.add_command(plot)

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .display_settings import DisplaySettings
+from .fiducial import Fiducial
 from .markup import Markup, MarkupTypes
 
 
@@ -27,6 +28,26 @@ class MarkupManager:
         Initialize the class.
         """
         self.markups = []
+
+    def find_fiducial(self, label: str) -> Fiducial | None:
+        """
+        Find a markup by its label.
+
+        Parameters
+        ----------
+        label : str
+            Label of the markup.
+
+        Returns
+        -------
+        Markup or None
+            Markup with the given label or None if not found.
+        """
+        for markup in self.markups:
+            for control_point in markup.control_points:
+                if control_point.label == label:
+                    return control_point
+        return None
 
     def _add_item(
         self,
@@ -182,7 +203,7 @@ class MarkupManager:
         self._add_item(MarkupTypes.CURVE, description, label, position, display, visible_points)
 
     @staticmethod
-    def from_file(path: Path) -> "MarkupManager":
+    def load(path: Path) -> "MarkupManager":
         """
         Load a markup manager from a file.
 
@@ -199,6 +220,22 @@ class MarkupManager:
         with path.open("r") as f:
             data = json.load(f)
         return MarkupManager.from_dict(data)
+
+    def save(self, path: Path) -> None:
+        """
+        Save the markup manager to a file.
+
+        Parameters
+        ----------
+        path : Path
+            Path to the file.
+
+        Returns
+        -------
+        None
+        """
+        with path.open("w") as f:
+            json.dump(self.to_dict(), f, indent=4)
 
     @staticmethod
     def from_dict(data: dict) -> "MarkupManager":

@@ -179,7 +179,10 @@ def optimize(
         MeanSquaredAngularError,
     )
     from evdplanner.network.training.utils import get_data
-    from evdplanner.network.transforms.defaults import default_load_transforms, default_augment_transforms
+    from evdplanner.network.transforms.defaults import (
+        default_augment_transforms,
+        default_load_transforms,
+    )
 
     set_verbosity(verbose)
 
@@ -214,7 +217,7 @@ def optimize(
 
     if final_bias and final_bias.exists():
         logger.info(f"Loading initial weights for final layer from {final_bias}.")
-        with final_bias.open('r') as file:
+        with final_bias.open("r") as file:
             final_bias = json.load(file)
 
         bias = []

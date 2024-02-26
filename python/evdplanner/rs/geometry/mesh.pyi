@@ -37,9 +37,15 @@ class Mesh:
     ----------
     origin : Vec3
         Origin of the mesh.
+    vertices : list[Vec3]
+        List of vertices.
+    triangles : list[Triangle]
+        List of triangles.
     """
 
     origin: Vec3
+    vertices: list[Vec3]
+    triangles: list[Triangle]
     def __init__(
         self, origin: Vec3, vertices: list[Vec3], triangles: list[tuple[int, int, int]]
     ) -> None:

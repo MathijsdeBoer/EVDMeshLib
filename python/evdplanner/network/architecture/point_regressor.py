@@ -206,8 +206,10 @@ class PointRegressor(Regressor, OptimizableModel):
                         logger.debug(f"Setting output layer {i} final_bias={self.final_bias[i]}")
                         linear.bias.data = nn.Parameter(torch.tensor(self.final_bias[i]))
                     else:
-                        msg = ("final_bias must have the same length as the number of keypoints,"
-                               " the number of dimensions, or be a single float.")
+                        msg = (
+                            "final_bias must have the same length as the number of keypoints,"
+                            " the number of dimensions, or be a single float."
+                        )
                         logger.error(msg)
                         raise ValueError(msg)
                 else:

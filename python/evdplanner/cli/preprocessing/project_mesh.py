@@ -236,7 +236,7 @@ def equirectangular(
         projected_keypoints: list[dict[str, tuple[float, float]]] = []
 
         logger.info(f"Loading keypoints from {ctx.obj['keypoints_file']}")
-        markups = MarkupManager.from_file(ctx.obj["keypoints_file"])
+        markups = MarkupManager.load(ctx.obj["keypoints_file"])
 
         logger.info("Projecting keypoints...")
         for markup in markups.markups:

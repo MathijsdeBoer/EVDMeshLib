@@ -2,7 +2,7 @@
 Rust core bindings.
 """
 from .geometry import Mesh
-from .linalg import Vec3
+from .linalg import Mat4, Vec3
 from .rendering import (
     Camera,
     CameraType,
@@ -18,6 +18,7 @@ __all__ = [
     "Mesh",
     "Intersection",
     "IntersectionSort",
+    "Mat4",
     "Vec3",
     "Ray",
     "CPURenderer",

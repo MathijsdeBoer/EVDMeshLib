@@ -118,6 +118,30 @@ impl Mat4 {
             panic!("Index out of range")
         }
     }
+
+    pub fn __add__(&self, other: Mat4) -> Mat4 {
+        *self + other
+    }
+
+    pub fn __iadd__(&mut self, other: Mat4) {
+        *self += other;
+    }
+
+    pub fn __sub__(&self, other: Mat4) -> Mat4 {
+        *self - other
+    }
+
+    pub fn __isub__(&mut self, other: Mat4) {
+        *self -= other;
+    }
+
+    pub fn __mul__(&self, other: Mat4) -> Mat4 {
+        *self * other
+    }
+
+    pub fn __imul__(&mut self, other: Mat4) {
+        *self = *self * other;
+    }
 }
 
 impl Add<Mat4> for Mat4 {

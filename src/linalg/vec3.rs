@@ -208,6 +208,10 @@ impl Vec3 {
         *self *= factor;
     }
 
+    pub fn __matmul__(&self, mat: Mat4) -> Self {
+        *self * mat
+    }
+
     pub fn __truediv__(&self, factor: f64) -> Self {
         *self / factor
     }

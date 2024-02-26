@@ -12,6 +12,7 @@ fn rs(_py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_class::<geometry::Mesh>()?;
     m.add_class::<linalg::Vec3>()?;
+    m.add_class::<linalg::Mat4>()?;
     m.add_class::<rendering::Camera>()?;
     m.add_class::<rendering::CameraType>()?;
     m.add_class::<rendering::Intersection>()?;

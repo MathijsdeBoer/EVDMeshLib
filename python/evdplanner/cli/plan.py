@@ -49,15 +49,15 @@ import click
     help="Write intermediate results to file.",
 )
 def plan(
-        skin: Path,
-        ventricles: Path,
-        output: Path,
-        skin_model: Path,
-        ventricles_model: Path,
-        gpu_model: bool = False,
-        gpu_render: bool = False,
-        verbose: int = 0,
-        write_intermediate: bool = False,
+    skin: Path,
+    ventricles: Path,
+    output: Path,
+    skin_model: Path,
+    ventricles_model: Path,
+    gpu_model: bool = False,
+    gpu_render: bool = False,
+    verbose: int = 0,
+    write_intermediate: bool = False,
 ) -> None:
     """
     Plan EVD trajectory.

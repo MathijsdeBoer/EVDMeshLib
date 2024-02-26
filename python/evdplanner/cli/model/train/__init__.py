@@ -68,6 +68,15 @@ import click
     help="Root directory containing ahead-of-time augmented data for training.",
 )
 @click.option(
+    "--val",
+    "val_root",
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+    help="Root directory containing validation data.",
+)
+@click.option(
     "--test",
     "test_root",
     type=click.Path(
@@ -228,12 +237,18 @@ def train(
         output_label_key="keypoints",
     )
 
+    if augment_root:
+        logger.info(f"Collecting data from {augment_root}.")
+        augment_samples, _, _ = get_data(augment_root, anatomy)
+        train_samples += augment_samples
+
     if val_root:
         logger.info(f"Collecting data from {val_root}.")
         val_samples, _, _ = get_data(val_root, anatomy)
     else:
         logger.warning("No validation data provided. Using 20% of training data for validation.")
         val_samples = sample(train_samples, int(0.2 * len(train_samples)))
+        train_samples = [s for s in train_samples if s not in val_samples]
 
     if test_root:
         logger.info(f"Collecting data from {test_root}.")
@@ -244,7 +259,7 @@ def train(
 
     if final_bias and final_bias.exists():
         logger.info(f"Loading initial weights for final layer from {final_bias}.")
-        with final_bias.open('r') as file:
+        with final_bias.open("r") as file:
             final_bias = json.load(file)
 
         bias = []
