@@ -99,6 +99,7 @@ def project_mesh(
     None
     """
     import numpy as np
+    from loguru import logger
 
     from evdplanner.cli import set_verbosity
     from evdplanner.geometry import Mesh
@@ -110,11 +111,11 @@ def project_mesh(
         ctx.obj = {}
 
     ctx.obj["mesh_name"] = mesh.stem.split("_")[1]
+    logger.info("Loading mesh...")
     ctx.obj["mesh"] = Mesh.load(str(mesh), 10_000_000)
     ctx.obj["output"] = output
     ctx.obj["resolution"] = resolution
     ctx.obj["gpu"] = gpu
-    ctx.obj["verbose"] = verbose
     ctx.obj["keypoints_file"] = keypoints_file
     ctx.obj["strict"] = strict
 
@@ -139,17 +140,18 @@ def equirectangular(
     from evdplanner.rendering import Camera, CameraType, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
-    logger.info(
-        f"Mesh has {ctx.obj['mesh'].num_vertices} vertices and "
-        f"{ctx.obj['mesh'].num_triangles} faces"
-    )
+    logger.debug(f"Number of triangles: {ctx.obj['mesh'].num_triangles}")
     logger.debug(f"Mesh origin: {ctx.obj['mesh'].origin}")
     logger.debug(f"Theta offset: {theta_offset}")
     logger.debug(f"Output resolution: {ctx.obj['resolution']}x{ctx.obj['resolution'] // 2}")
 
+    mesh = ctx.obj["mesh"]
+    logger.info("Flattening BVH...")
+    mesh.flatten_bvh()
+
     logger.info("Initializing camera...")
     camera = Camera(
-        ctx.obj["mesh"].origin,
+        mesh.origin,
         forward=Vec3(0, -1, 0),
         up=Vec3(0, 0, 1),
         x_resolution=ctx.obj["resolution"],
@@ -163,7 +165,7 @@ def equirectangular(
         logger.info("Using GPU renderer")
         renderer = GPURenderer(
             camera,
-            mesh=ctx.obj["mesh"],
+            mesh=mesh,
         )
     else:
         from evdplanner.rendering.cpu import CPURenderer
@@ -171,7 +173,7 @@ def equirectangular(
         logger.info("Using CPU renderer")
         renderer = CPURenderer(
             camera,
-            mesh=ctx.obj["mesh"],
+            mesh=mesh,
         )
 
     logger.info("Rendering...")
@@ -268,3 +270,128 @@ def equirectangular(
 
         with output_file.open("w") as f:
             json.dump(projected_keypoints, f, indent=4)
+
+
+@project_mesh.command(name="orthographic")
+@click.pass_context
+@click.option(
+    "-k",
+    "--kocher",
+    type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path),
+    required=True,
+    help="Path to the Kocher projection file.",
+)
+@click.option(
+    "-s",
+    "--side",
+    type=click.Choice(["left", "right"]),
+    default=None,
+    show_default=True,
+    help="Side of the Kocher projection.",
+)
+def orthographic(
+    ctx: click.Context,
+    kocher: Path,
+    side: str | None = None,
+) -> None:
+    import numpy as np
+    from imageio.v3 import imwrite
+
+    from evdplanner.linalg import Vec3
+    from evdplanner.markups import MarkupManager
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort
+    from evdplanner.rendering.utils import normalize_image
+
+    if ctx.obj["gpu"]:
+        from evdplanner.rendering.gpu import GPURenderer as Renderer
+    else:
+        from evdplanner.rendering.cpu import CPURenderer as Renderer
+
+    from loguru import logger
+
+    logger.info(f"Loading Kocher projection from {kocher}")
+    markups = MarkupManager.load(kocher)
+    logger.debug("Searching for Kocher's Points")
+    left_kp = markups.find_fiducial("Left Kocher")
+    right_kp = markups.find_fiducial("Right Kocher")
+    logger.debug(f"Left Kocher: {left_kp}")
+    logger.debug(f"Right Kocher: {right_kp}")
+
+    if left_kp is None or right_kp is None:
+        msg = f"Could not find Kocher points in {kocher}"
+        logger.error(msg)
+        raise ValueError(msg)
+
+    left_kp = Vec3(*left_kp.position[:3])
+    right_kp = Vec3(*right_kp.position[:3])
+
+    sides_to_render: list[tuple[Vec3, str]] = []
+    if not side:
+        sides_to_render = [(left_kp, "left"), (right_kp, "right")]
+    else:
+        if side == "left":
+            sides_to_render.append((left_kp, "left"))
+        elif side == "right":
+            sides_to_render.append((right_kp, "right"))
+        else:
+            raise ValueError(f"Invalid side: {side}")
+
+    mesh = ctx.obj["mesh"]
+    renders: list[tuple[str, np.ndarray]] = []
+    for kp, side in sides_to_render:
+        logger.info(f"Projecting mesh to {side} Kocher's Point")
+
+        camera = Camera(
+            kp,
+            forward=(mesh.origin - kp).unit_vector,
+            up=-Vec3(0, 0, 1),
+            x_resolution=ctx.obj["resolution"],
+            y_resolution=ctx.obj["resolution"],
+            camera_type=CameraType.Orthographic,
+            size=125,
+        )
+        renderer = Renderer(
+            camera,
+            mesh=mesh,
+        )
+
+        logger.info("Rendering...")
+        far_render = renderer.render(
+            intersection_mode=IntersectionSort.Farthest,
+        )
+        near_render = renderer.render(
+            intersection_mode=IntersectionSort.Nearest,
+        )
+        logger.info("Rendering done")
+
+        render = far_render
+        thickness = far_render[..., 0] - near_render[..., 0]
+        # Add thickness to the last channel
+        render = np.dstack((thickness, render))
+
+        renders.append((side, render))
+
+    for side, render in renders:
+        thickness_image = render[..., 0]
+        depth_image = render[..., 1]
+        normal_image = render[..., 2:]
+
+        thickness_image = normalize_image(thickness_image)
+        depth_image = normalize_image(depth_image)
+        normal_image += 1.0
+        normal_image /= 2.0
+
+        thickness_image = (thickness_image * 65535).astype(np.uint16)
+        depth_image = (depth_image * 65535).astype(np.uint16)
+        normal_image = (normal_image * 255).astype(np.uint8)
+
+        thickness_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_{side}_thickness.png"
+        depth_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_{side}_depth.png"
+        normal_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_{side}_normal.png"
+
+        logger.info(f"Saving to {thickness_output}")
+        imwrite(thickness_output, thickness_image)
+        logger.info(f"Saving to {depth_output}")
+        imwrite(depth_output, depth_image)
+        logger.info(f"Saving to {normal_output}")
+        imwrite(normal_output, normal_image)
