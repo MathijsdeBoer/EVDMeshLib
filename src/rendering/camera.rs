@@ -114,10 +114,38 @@ impl Camera {
     pub fn cast_ray(&self, x: usize, y: usize) -> Ray {
         match self.camera_type {
             CameraType::Perspective => {
-                todo!("Perspective camera not yet implemented")
+                let origin = self.origin;
+                let forward = self.forward;
+                let left = self.left;
+                let up = self.up;
+
+                // Imaginary plane at distance 1 from the camera
+                let plane_distance = 1.0;
+                let plane_width = 2.0 * (self.fov / 2.0).tan();
+                let plane_height = plane_width / self.aspect_ratio;
+
+                // find the position of the pixel on the plane
+                let x = (x as f64 / self.x_resolution as f64 - 0.5) * plane_width;
+                let y = (y as f64 / self.y_resolution as f64 - 0.5) * plane_height;
+                let plane_position = left * x + up * y + forward * plane_distance;
+
+                Ray::new(
+                    origin,
+                    (plane_position - origin).unit_vector(),
+                )
             }
             CameraType::Orthographic => {
-                todo!("Orthographic camera not yet implemented")
+                let forward = self.forward;
+                let left = self.left;
+                let up = self.up;
+
+                let x = (x as f64 / self.x_resolution as f64 - 0.5) * self.size * self.aspect_ratio;
+                let y = (y as f64 / self.y_resolution as f64 - 0.5) * self.size;
+
+                Ray::new(
+                    self.origin + left * x + up * y,
+                    forward,
+                )
             }
             CameraType::Equirectangular => {
                 // Spherical sampling adapted from
@@ -151,7 +179,22 @@ impl Camera {
                 todo!("Perspective camera not yet implemented")
             }
             CameraType::Orthographic => {
-                todo!("Orthographic camera not yet implemented")
+                let back_direction = -self.forward;
+
+                // Ray-plane intersection
+                let t = (*point - self.origin).dot(&self.forward) / back_direction.dot(&self.forward);
+                let intersection = *point + back_direction * t;
+
+                // Find the position of the pixel on the plane,
+                // where the origin is (0.5, 0.5)
+                let x = (intersection.dot(&self.left) / self.size + 0.5) * self.x_resolution as f64;
+                let y = (intersection.dot(&self.up) / self.size + 0.5) * self.y_resolution as f64;
+
+                if normalized {
+                    (x / self.x_resolution as f64, y / self.y_resolution as f64)
+                } else {
+                    (x, y)
+                }
             }
             CameraType::Equirectangular => {
                 let direction_world = (*point - self.origin).unit_vector();

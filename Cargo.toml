@@ -8,8 +8,10 @@ name = "evdplanner"
 crate-type = ["cdylib"]
 
 [dependencies]
+bvh = "0.8.0"
 indicatif = "0.17.7"
 itertools = "0.12.0"
+nalgebra = "0.32.4"
 ndarray = "0.15.6"
 numpy = "0.20.0"
 rand = "0.8.5"

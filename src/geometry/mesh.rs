@@ -1,6 +1,11 @@
+use std::fmt::Debug;
 use std::fs::OpenOptions;
 use std::ops::Index;
 
+use bvh::aabb::{Aabb, Bounded};
+use bvh::bounding_hierarchy::BHShape;
+use bvh::bvh::Bvh;
+use nalgebra::{Point3, Vector3};
 use ndarray::{Array3, Ix3};
 use numpy::{IntoPyArray, PyArray};
 use pyo3::prelude::*;
@@ -31,13 +36,12 @@ use crate::rendering::{Intersection, IntersectionSort, Ray};
 fn ray_triangle_intersect(
     ray: &Ray,
     triangle: &Triangle,
-    vertices: &[Vec3],
     epsilon: f64,
 ) -> Option<Intersection> {
     // Get the vertices and normal of the current triangle
-    let a = vertices[triangle.a];
-    let b = vertices[triangle.b];
-    let c = vertices[triangle.c];
+    let a = triangle.a;
+    let b = triangle.b;
+    let c = triangle.c;
     let normal = triangle.normal;
 
     // If the ray is parallel to the triangle, there is no intersection
@@ -107,31 +111,71 @@ pub struct Triangle {
     pub index: usize,
 
     #[pyo3(get)]
-    pub a: usize,
+    pub a: Vec3,
     #[pyo3(get)]
-    pub b: usize,
+    pub b: Vec3,
     #[pyo3(get)]
-    pub c: usize,
+    pub c: Vec3,
 
     #[pyo3(get)]
     pub normal: Vec3,
     #[pyo3(get)]
     pub area: f64,
+    
+    node_index: usize,
 }
 
 impl Triangle {
+    pub fn new(index: usize, a: Vec3, b: Vec3, c: Vec3, normal: Vec3, area: f64) -> Self {
+        Self {
+            index,
+            a,
+            b,
+            c,
+            normal,
+            area,
+            node_index: 0,
+        }
+    }
+    
     /// Returns the indices of the vertices that form the triangle as a vector.
     ///
     /// # Returns
     ///
     /// * `Vec<usize>` - The indices of the vertices that form the triangle.
-    pub fn vertices(&self) -> Vec<usize> {
+    pub fn vertices(&self) -> Vec<Vec3> {
         vec![self.a, self.b, self.c]
     }
 }
 
+impl Bounded<f64, 3> for Triangle {
+    fn aabb(&self) -> Aabb<f64, 3> {
+        let min = Vec3::new(
+            self.a.x.min(self.b.x).min(self.c.x),
+            self.a.y.min(self.b.y).min(self.c.y),
+            self.a.z.min(self.b.z).min(self.c.z),
+        );
+        let max = Vec3::new(
+            self.a.x.max(self.b.x).max(self.c.x),
+            self.a.y.max(self.b.y).max(self.c.y),
+            self.a.z.max(self.b.z).max(self.c.z),
+        );
+        Aabb::with_bounds(Point3::new(min.x, min.y, min.z), Point3::new(max.x, max.y, max.z))
+    }
+}
+
+impl BHShape<f64, 3> for Triangle {
+    fn set_bh_node_index(&mut self, index: usize) {
+        self.node_index = index;
+    }
+
+    fn bh_node_index(&self) -> usize {
+        self.node_index
+    }
+}
+
 impl Index<usize> for Triangle {
-    type Output = usize;
+    type Output = Vec3;
 
     fn index(&self, index: usize) -> &Self::Output {
         match index {
@@ -140,6 +184,25 @@ impl Index<usize> for Triangle {
             2 => &self.c,
             _ => panic!("Index out of bounds"),
         }
+    }
+}
+
+impl PartialEq for Triangle {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index
+    }
+}
+
+impl Debug for Triangle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Triangle")
+            .field("index", &self.index)
+            .field("a", &self.a)
+            .field("b", &self.b)
+            .field("c", &self.c)
+            .field("normal", &self.normal)
+            .field("area", &self.area)
+            .finish()
     }
 }
 
@@ -181,9 +244,9 @@ impl Index<usize> for Triangle {
 pub struct Mesh {
     #[pyo3(get)]
     pub origin: Vec3,
-
-    vertices: Vec<Vec3>,
+    
     triangles: Vec<Triangle>,
+    bvh: Bvh<f64, 3>,
 }
 
 #[pymethods]
@@ -215,20 +278,13 @@ impl Mesh {
 
             normals.push(normal);
             areas.push(area);
-            in_triangles.push(Triangle {
-                index,
-                a: *i,
-                b: *j,
-                c: *k,
-                normal,
-                area,
-            });
+            in_triangles.push(Triangle::new(index, a, b, c, normal, area));
         }
 
         Self {
             origin,
-            vertices,
-            triangles: in_triangles,
+            triangles: in_triangles.clone(),
+            bvh: Bvh::build(&mut in_triangles),
         }
     }
 
@@ -264,7 +320,7 @@ impl Mesh {
             .collect();
 
         // Create a vector of triangles based on the original mesh data
-        let triangles: Vec<Triangle> = mesh
+        let mut triangles: Vec<Triangle> = mesh
             .faces
             .iter()
             .enumerate()
@@ -274,22 +330,18 @@ impl Mesh {
                 let c = vertices[f.vertices[2]];
                 let area = (b - a).cross(&(c - a)).length() / 2.0;
 
-                Triangle {
-                    index,
-                    a: f.vertices[0],
-                    b: f.vertices[1],
-                    c: f.vertices[2],
-                    normal: Vec3::new(f.normal[0] as f64, f.normal[1] as f64, f.normal[2] as f64),
-                    area,
-                }
+                Triangle::new(
+                    index, a, b, c,Vec3::new(f.normal[0] as f64, f.normal[1] as f64, f.normal[2] as f64), area 
+                )
             })
             .collect();
-
+        
         let mut mesh = Self {
             origin: Vec3::new(0.0, 0.0, 0.0),
-            vertices,
-            triangles,
+            triangles: triangles.clone(),
+            bvh: Bvh::build(&mut triangles),
         };
+        
 
         let origin = mesh
             .uniform_sample(num_samples)
@@ -317,9 +369,9 @@ impl Mesh {
             .triangles
             .iter()
             .map(|t| {
-                let a = self.vertices[t.a];
-                let b = self.vertices[t.b];
-                let c = self.vertices[t.c];
+                let a = t.a;
+                let b = t.b;
+                let c = t.c;
                 let normal = stl_io::Normal::new(t.normal.as_f32_array());
 
                 stl_io::Triangle {
@@ -363,9 +415,9 @@ impl Mesh {
 
         for _ in 0..num_samples {
             let triangle = &self.triangles[dist.sample(&mut rng)];
-            let a = self.vertices[triangle.a];
-            let b = self.vertices[triangle.b];
-            let c = self.vertices[triangle.c];
+            let a = triangle.a;
+            let b = triangle.b;
+            let c = triangle.c;
 
             let u: f64 = rng.gen_range(0.0..1.0);
             let v: f64 = rng.gen_range(0.0..1.0);
@@ -377,13 +429,33 @@ impl Mesh {
 
         samples
     }
+    
+    #[pyo3(signature = (num_samples=1_000_000))]
+    pub fn recalculate(&mut self, num_samples: usize) {
+        self.rebuild_bvh();
+        self.recalculate_normals();
+        self.recalculate_areas();
+        self.recalculate_origin(num_samples);
+    }
+    
+    pub fn rebuild_bvh(&mut self) {
+        self.bvh = Bvh::build(&mut self.triangles);
+    }
+    
+    pub fn flatten_bvh(&mut self) {
+        self.bvh.flatten();
+    }
+    
+    pub fn print_bvh(&self) {
+        self.bvh.pretty_print();
+    }
 
     pub fn recalculate_normals(&mut self) {
         // Calculate the normal of each triangle
         self.triangles.par_iter_mut().for_each(|triangle| {
-            let a = self.vertices[triangle.a];
-            let b = self.vertices[triangle.b];
-            let c = self.vertices[triangle.c];
+            let a = triangle.a;
+            let b = triangle.b;
+            let c = triangle.c;
 
             triangle.normal = (b - a).cross(&(c - a)).unit_vector();
         });
@@ -392,9 +464,9 @@ impl Mesh {
     pub fn recalculate_areas(&mut self) {
         // Calculate the area of each triangle
         self.triangles.par_iter_mut().for_each(|triangle| {
-            let a = self.vertices[triangle.a];
-            let b = self.vertices[triangle.b];
-            let c = self.vertices[triangle.c];
+            let a = triangle.a;
+            let b = triangle.b;
+            let c = triangle.c;
 
             triangle.area = (b - a).cross(&(c - a)).length() / 2.0;
         });
@@ -431,7 +503,16 @@ impl Mesh {
         sorting: IntersectionSort,
         epsilon: f64,
     ) -> Option<Intersection> {
-        let intersections = self.intersect_brute_force(ray, epsilon);
+        let bvh_ray = bvh::ray::Ray::new(
+            Point3::new(ray.origin.x, ray.origin.y, ray.origin.z),
+            Vector3::new(ray.direction.x, ray.direction.y, ray.direction.z),
+        );
+        let triangles_to_intersect = self.bvh.traverse(&bvh_ray, &self.triangles);
+        
+        let intersections = triangles_to_intersect
+            .par_iter()
+            .filter_map(|triangle| ray_triangle_intersect(ray, triangle, epsilon))
+            .collect::<Vec<Intersection>>();
 
         // Return the intersection point that is closest or farthest to the ray's origin,
         // depending on the sorting parameter
@@ -448,34 +529,52 @@ impl Mesh {
     pub fn triangles_as_vertex_array(&self, py: Python<'_>) -> Py<PyArray<f64, Ix3>> {
         let mut triangles = Array3::zeros((self.triangles.len(), 3, 3));
         for (i, triangle) in self.triangles.iter().enumerate() {
-            triangles[[i, 0, 0]] = self.vertices[triangle.a].x;
-            triangles[[i, 0, 1]] = self.vertices[triangle.a].y;
-            triangles[[i, 0, 2]] = self.vertices[triangle.a].z;
+            triangles[[i, 0, 0]] = triangle.a.x;
+            triangles[[i, 0, 1]] = triangle.a.y;
+            triangles[[i, 0, 2]] = triangle.a.z;
 
-            triangles[[i, 1, 0]] = self.vertices[triangle.b].x;
-            triangles[[i, 1, 1]] = self.vertices[triangle.b].y;
-            triangles[[i, 1, 2]] = self.vertices[triangle.b].z;
+            triangles[[i, 1, 0]] = triangle.b.x;
+            triangles[[i, 1, 1]] = triangle.b.y;
+            triangles[[i, 1, 2]] = triangle.b.z;
 
-            triangles[[i, 2, 0]] = self.vertices[triangle.c].x;
-            triangles[[i, 2, 1]] = self.vertices[triangle.c].y;
-            triangles[[i, 2, 2]] = self.vertices[triangle.c].z;
+            triangles[[i, 2, 0]] = triangle.c.x;
+            triangles[[i, 2, 1]] = triangle.c.y;
+            triangles[[i, 2, 2]] = triangle.c.z;
         }
         triangles.into_pyarray(py).to_owned()
     }
 
     #[pyo3(signature = (iterations=10, smoothing_factor=0.5))]
     pub fn laplacian_smooth(&mut self, iterations: usize, smoothing_factor: f64) {
-        let mut vertex_neighbours: Vec<Vec<usize>> = vec![Vec::new(); self.vertices.len()];
-
+        let mut vertices: Vec<Vec3> = vec![];
+        let mut index_triangles: Vec<(usize, usize, usize)> = vec![];
+        
         for triangle in self.triangles.iter() {
-            vertex_neighbours[triangle.a].push(triangle.b);
-            vertex_neighbours[triangle.a].push(triangle.c);
+            let mut triangle_indices = vec![0, 0, 0];
+            
+            for (idx, vertex) in triangle.vertices().iter().enumerate() {
+                if !vertices.contains(&vertex) {
+                    vertices.push(*vertex);
+                    triangle_indices[idx] = vertices.len() - 1;
+                } else {
+                    triangle_indices[idx] = vertices.iter().position(|v| v == vertex).unwrap();
+                }
+            }
+            
+            index_triangles.push((triangle_indices[0], triangle_indices[1], triangle_indices[2]));
+        }
+        
+        let mut vertex_neighbours: Vec<Vec<usize>> = vec![Vec::new(); vertices.len()];
 
-            vertex_neighbours[triangle.b].push(triangle.a);
-            vertex_neighbours[triangle.b].push(triangle.c);
+        for triangle in index_triangles.iter() {
+            vertex_neighbours[triangle.0].push(triangle.1);
+            vertex_neighbours[triangle.0].push(triangle.2);
 
-            vertex_neighbours[triangle.c].push(triangle.a);
-            vertex_neighbours[triangle.c].push(triangle.b);
+            vertex_neighbours[triangle.1].push(triangle.0);
+            vertex_neighbours[triangle.1].push(triangle.2);
+
+            vertex_neighbours[triangle.2].push(triangle.0);
+            vertex_neighbours[triangle.2].push(triangle.1);
         }
 
         for _ in 0..iterations {
@@ -484,31 +583,39 @@ impl Mesh {
                 .map(|neighbours| {
                     let mut mean = Vec3::new(0.0, 0.0, 0.0);
                     for neighbour in neighbours {
-                        mean += self.vertices[*neighbour];
+                        mean += vertices[*neighbour];
                     }
                     mean / neighbours.len() as f64
                 })
                 .collect();
 
-            self.vertices
+            vertices
                 .par_iter_mut()
                 .zip(neighbour_means.par_iter())
                 .for_each(|(vertex, mean)| {
                     *vertex = *vertex + (*mean - *vertex) * smoothing_factor;
                 });
         }
+        
+        self.triangles = index_triangles
+            .par_iter()
+            .enumerate()
+            .map(|(index, (i, j, k))| {
+                let a = vertices[*i];
+                let b = vertices[*j];
+                let c = vertices[*k];
 
-        self.recalculate_normals();
+                let normal = (b - a).cross(&(c - a)).unit_vector();
+                let area = (b - a).cross(&(c - a)).length() / 2.0;
+
+                Triangle::new(index, a, b, c, normal, area)
+            })
+            .collect();
     }
 
     #[getter]
     pub fn num_triangles(&self) -> usize {
         self.triangles.len()
-    }
-
-    #[getter]
-    pub fn num_vertices(&self) -> usize {
-        self.vertices.len()
     }
 
     #[getter]
@@ -526,92 +633,38 @@ impl Mesh {
     }
 
     #[getter]
-    pub fn bounding_box(&self) -> (Vec3, Vec3) {
-        let mut min = Vec3::new(f64::MAX, f64::MAX, f64::MAX);
-        let mut max = Vec3::new(f64::MIN, f64::MIN, f64::MIN);
-
-        for v in &self.vertices {
-            if v.x < min.x {
-                min.x = v.x;
-            }
-            if v.y < min.y {
-                min.y = v.y;
-            }
-            if v.z < min.z {
-                min.z = v.z;
-            }
-
-            if v.x > max.x {
-                max.x = v.x;
-            }
-            if v.y > max.y {
-                max.y = v.y;
-            }
-            if v.z > max.z {
-                max.z = v.z;
-            }
-        }
-
-        (min, max)
-    }
-
-    #[getter]
-    pub fn get_vertices(&self) -> Vec<Vec3> {
-        self.vertices.clone()
-    }
-
-    #[setter]
-    pub fn set_vertices(&mut self, vertices: Vec<Vec3>) {
-        self.vertices = vertices;
-    }
-
-    #[getter]
     pub fn get_triangles(&self) -> Vec<Triangle> {
         self.triangles.clone()
     }
 
     #[setter]
-    pub fn set_triangles(&mut self, triangles: Vec<(usize, usize, usize)>) {
+    pub fn set_triangles(&mut self, triangles: Vec<(Vec3, Vec3, Vec3)>) {
         self.triangles = triangles
             .iter()
             .enumerate()
             .map(|(index, (i, j, k))| {
-                let a = self.vertices[*i];
-                let b = self.vertices[*j];
-                let c = self.vertices[*k];
+                let a = *i;
+                let b = *j;
+                let c = *k;
 
                 let normal = (b - a).cross(&(c - a)).unit_vector();
                 let area = (b - a).cross(&(c - a)).length() / 2.0;
 
-                Triangle {
-                    index,
-                    a: *i,
-                    b: *j,
-                    c: *k,
-                    normal,
-                    area,
-                }
+                Triangle::new(index, a, b, c, normal, area)
             })
             .collect();
     }
 }
 
 impl Mesh {
-    fn signed_volume_of_triangle(&self, i: usize, j: usize, k: usize) -> f64 {
+    fn signed_volume_of_triangle(&self, i: Vec3, j: Vec3, k: Vec3) -> f64 {
         // Per http://chenlab.ece.cornell.edu/Publication/Cha/icip01_Cha.pdf
-        let v321 = self.vertices[k].x * self.vertices[j].y * self.vertices[i].z;
-        let v231 = self.vertices[j].x * self.vertices[k].y * self.vertices[i].z;
-        let v312 = self.vertices[k].x * self.vertices[i].y * self.vertices[j].z;
-        let v132 = self.vertices[i].x * self.vertices[k].y * self.vertices[j].z;
-        let v213 = self.vertices[j].x * self.vertices[i].y * self.vertices[k].z;
-        let v123 = self.vertices[i].x * self.vertices[j].y * self.vertices[k].z;
+        let v321 = k.x * j.y * i.z;
+        let v231 = j.x * k.y * i.z;
+        let v312 = k.x * i.y * j.z;
+        let v132 = i.x * k.y * j.z;
+        let v213 = j.x * i.y * k.z;
+        let v123 = i.x * j.y * k.z;
         (1.0 / 6.0) * (-v321 + v231 + v312 - v132 - v213 + v123)
-    }
-
-    fn intersect_brute_force(&self, ray: &Ray, epsilon: f64) -> Vec<Intersection> {
-        self.triangles
-            .par_iter()
-            .filter_map(|triangle| ray_triangle_intersect(ray, triangle, &self.vertices, epsilon))
-            .collect()
     }
 }

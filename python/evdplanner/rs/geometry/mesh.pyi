@@ -23,9 +23,9 @@ class Triangle:
         Area of the triangle.
     """
 
-    a: int
-    b: int
-    c: int
+    a: Vec3
+    b: Vec3
+    c: Vec3
     normal: Vec3
     area: float
 
@@ -44,8 +44,8 @@ class Mesh:
     """
 
     origin: Vec3
-    vertices: list[Vec3]
     triangles: list[Triangle]
+
     def __init__(
         self, origin: Vec3, vertices: list[Vec3], triangles: list[tuple[int, int, int]]
     ) -> None:
@@ -120,6 +120,43 @@ class Mesh:
         -------
         None
         """
+    def recalculate(self, num_samples: int = 1_000_000) -> None:
+        """
+        Rebuild the BVH and recalculate the normals, areas, and origin of the mesh.
+
+        Parameters
+        ----------
+        num_samples : int, optional
+            Number of samples to use for origin calculation, by default 1_000_000.
+
+        Returns
+        -------
+        None
+        """
+    def rebuild_bvh(self) -> None:
+        """
+        Rebuild the BVH.
+
+        Returns
+        -------
+        None
+        """
+    def flatten_bvh(self) -> None:
+        """
+        Flatten the BVH.
+
+        Returns
+        -------
+        None
+        """
+    def print_bvh(self) -> None:
+        """
+        Print the BVH.
+
+        Returns
+        -------
+        None
+        """
     def intersect(
         self, ray: Ray, sorting: IntersectionSort, epsilon: float = 1e-8
     ) -> Intersection | None:
@@ -175,16 +212,6 @@ class Mesh:
             Number of triangles.
         """
     @property
-    def num_vertices(self) -> int:
-        """
-        Number of vertices in the mesh.
-
-        Returns
-        -------
-        int
-            Number of vertices.
-        """
-    @property
     def surface_area(self) -> float:
         """
         Surface area of the mesh.
@@ -203,14 +230,4 @@ class Mesh:
         -------
         float
             Volume.
-        """
-    @property
-    def bounding_box(self) -> tuple[Vec3, Vec3]:
-        """
-        Bounding box of the mesh.
-
-        Returns
-        -------
-        tuple[Vec3, Vec3]
-            Bounding box, represented by the minimum and maximum vertices.
         """
