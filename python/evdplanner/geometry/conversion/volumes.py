@@ -4,16 +4,16 @@ Functions for converting volumes to meshes.
 
 import mcubes
 import numpy as np
+from loguru import logger
+
+import SimpleITK as sitk
 
 from evdplanner.geometry import Mesh
 from evdplanner.linalg import Vec3
 
 
 def volume_to_mesh(
-    volume: np.ndarray,
-    origin: Vec3 | tuple[float, float, float] | None = None,
-    spacing: Vec3 | tuple[float, float, float] | None = None,
-    num_samples: int = 1_000_000,
+    volume: sitk.Image,
 ) -> Mesh:
     """
     Convert a volume to a mesh.
@@ -22,10 +22,6 @@ def volume_to_mesh(
     ----------
     volume : np.ndarray
         The volume to convert to a mesh.
-    origin : Vec3 or tuple
-        The origin of the volume.
-    spacing : Vec3 or tuple
-        The spacing of the volume.
     num_samples : int
         The number of samples to use when recalculating the origin of the mesh.
 
@@ -34,40 +30,39 @@ def volume_to_mesh(
     Mesh
         The mesh generated from the volume.
     """
-    if origin is None:
-        origin = Vec3.zero()
-    if spacing is None:
-        spacing = Vec3.one()
-
-    if isinstance(origin, tuple):
-        origin = Vec3(*origin)
-    if isinstance(spacing, tuple):
-        spacing = Vec3(*spacing)
+    array = sitk.GetArrayFromImage(volume)
 
     # Pad the volume with zeros to avoid edge effects
-    volume = np.pad(volume, 1, mode="constant")
+    array = np.pad(array, 1, mode="constant")
+    logger.debug(f"Padded volume shape: {array.shape}")
+
+    array = np.swapaxes(array, 0, 2)
 
     # Extract the mesh from the volume
-    vertices, triangles = mcubes.marching_cubes(mcubes.smooth(volume), 0.0)
+    logger.info("Extracting mesh from volume...")
+    vertices, triangles = mcubes.marching_cubes(mcubes.smooth(array), 0.0)
 
+    logger.debug(f"Number of vertices: {len(vertices)}")
+    logger.debug(f"Number of triangles: {len(triangles)}")
+
+    # Convert the vertices to the correct format
+    logger.info("Converting vertices to the correct format...")
     vertices = [
         Vec3(
-            vertex[0] * spacing[0],
-            vertex[1] * spacing[1],
-            vertex[2] * spacing[2],
+            *volume.TransformContinuousIndexToPhysicalPoint(vertex),
         )
-        - spacing
-        + origin
         for vertex in vertices
     ]
+    logger.debug(f"Vertices: {vertices[:5]}...")
+    logger.info("Converting triangles to the correct format...")
     faces = [tuple(triangle) for triangle in triangles]
 
     # Convert the mesh to the correct format
+    logger.info("Converting mesh to the correct format...")
     mesh = Mesh(
         Vec3.zero(),
         vertices,
         faces,
     )
-    mesh.recalculate_origin(num_samples)
 
     return mesh

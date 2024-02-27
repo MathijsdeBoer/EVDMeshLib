@@ -44,7 +44,6 @@ def convert_volume(
     -------
     None
     """
-    import numpy as np
     import SimpleITK as sitk
     from loguru import logger
 
@@ -56,17 +55,12 @@ def convert_volume(
     logger.info(f"Converting {volume} to {output}...")
     logger.debug("Reading volume...")
     volume = sitk.ReadImage(volume)
-    origin = volume.GetOrigin()
-    spacing = volume.GetSpacing()
     volume = sitk.DICOMOrient(volume, "LPS")
-    volume = sitk.GetArrayFromImage(volume)
 
-    logger.debug(f"Volume shape: {volume.shape}")
-    logger.debug(f"Volume origin: {origin}")
-    logger.debug(f"Volume spacing: {spacing}")
+    logger.debug(f"Volume shape: {volume.GetSize()}")
 
     logger.info("Converting volume to mesh...")
-    mesh = volume_to_mesh(np.swapaxes(volume, 0, -1), origin, spacing, num_samples=1_000_000)
+    mesh = volume_to_mesh(volume)
 
     logger.info("Smoothing mesh...")
     mesh.laplacian_smooth(iterations=10, smoothing_factor=0.25)
