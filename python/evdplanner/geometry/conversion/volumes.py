@@ -4,9 +4,8 @@ Functions for converting volumes to meshes.
 
 import mcubes
 import numpy as np
-from loguru import logger
-
 import SimpleITK as sitk
+from loguru import logger
 
 from evdplanner.geometry import Mesh
 from evdplanner.linalg import Vec3
@@ -36,6 +35,8 @@ def volume_to_mesh(
     array = np.pad(array, 1, mode="constant")
     logger.debug(f"Padded volume shape: {array.shape}")
 
+    # SimpleITK axis order is (x, y, z), after conversion to numpy it becomes (z, y, x)
+    # We need to swap the axes to get the correct order for the indexing later on
     array = np.swapaxes(array, 0, 2)
 
     # Extract the mesh from the volume

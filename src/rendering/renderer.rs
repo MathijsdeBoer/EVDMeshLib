@@ -49,7 +49,7 @@ impl Renderer {
             .par_iter()
             .map(|(y, x)| {
                 bar.inc(1);
-                (*y, *x, self.camera.cast_ray(*x, *y))
+                (*y, *x, self.camera.cast_ray(*x as f64, *y as f64))
             })
             .collect();
 

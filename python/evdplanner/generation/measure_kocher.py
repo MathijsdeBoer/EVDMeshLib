@@ -114,7 +114,9 @@ def _measure_surface_distance(
             logger.debug(f"Reached search distance of {search_distance}.")
             break
         elif total_rotation > max_angular_search_distance:
-            logger.debug(f"Reached maximum angular search distance of {max_angular_search_distance}.")
+            logger.debug(
+                f"Reached maximum angular search distance of {max_angular_search_distance}."
+            )
             break
 
     return vertical_points

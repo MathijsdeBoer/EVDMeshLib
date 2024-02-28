@@ -181,7 +181,9 @@ def equirectangular(
     render = renderer.render(
         intersection_mode=IntersectionSort.Farthest,
     )
-    logger.info(f"Rendering took {time() - start:.2f} seconds")
+    end = time()
+    delta = end - start
+    logger.info(f"Rendering took {delta:.2f} seconds")
 
     logger.info("Normalizing images...")
     depth_image = render[..., 0]
@@ -208,6 +210,9 @@ def equirectangular(
     logger.debug("Converting images to uint16 and uint8...")
     depth_image = (depth_image * 65535).astype(np.uint16)
     normal_image = (normal_image * 255).astype(np.uint8)
+
+    if not ctx.obj["output"].exists():
+        ctx.obj["output"].mkdir(parents=True)
 
     depth_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_depth.png"
     normal_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_normal.png"
@@ -344,7 +349,7 @@ def orthographic(
         camera = Camera(
             kp,
             forward=(mesh.origin - kp).unit_vector,
-            up=-Vec3(0, 0, 1),
+            up=Vec3(0, 0, 1),
             x_resolution=ctx.obj["resolution"],
             y_resolution=ctx.obj["resolution"],
             camera_type=CameraType.Orthographic,
