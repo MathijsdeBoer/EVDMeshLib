@@ -56,7 +56,7 @@ def kocher(
     from evdplanner.generation import measure_kocher
     from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
-    from evdplanner.markups import MarkupManager, DisplaySettings
+    from evdplanner.markups import DisplaySettings, MarkupManager
 
     set_verbosity(verbosity)
 
