@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 
 
-@click.command(name="predict-skin-mesh")
+@click.command()
 @click.option(
     "-m",
     "--model-path",
@@ -16,10 +16,11 @@ import click
 )
 @click.option(
     "-i",
-    "--mesh",
-    type=click.Path(exists=True, resolve_path=True, path_type=Path),
+    "--input-images",
+    type=(str, click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path)),
+    multiple=True,
     required=True,
-    help="Path to the mesh file.",
+    help="Input images to predict from.",
 )
 @click.option(
     "-o",
@@ -46,9 +47,9 @@ import click
     count=True,
     help="Verbosity level. Repeat for more verbosity.",
 )
-def predict_skin_mesh(
+def predict(
     model_path: Path,
-    mesh: Path,
+    input_images: list[tuple[str, Path]],
     output_path: Path,
     gpu_renderer: bool = False,
     gpu_model: bool = False,
@@ -61,8 +62,8 @@ def predict_skin_mesh(
     ----------
     model_path : Path
         Path to the model file.
-    mesh : Path
-        Path to the mesh file.
+    input_images : list[tuple[str, Path]]
+        List of tuples containing the image type and the path to the image.
     output_path : Path
         Path to the output file.
     gpu_renderer : bool, optional
@@ -77,117 +78,74 @@ def predict_skin_mesh(
     None
     """
     import json
+    from time import time
 
-    import numpy as np
-    import torch
-    from imageio.v3 import imwrite
     from loguru import logger
     from monai.transforms import Compose
+    from torch import device, load, no_grad
 
     from evdplanner.cli import set_verbosity
-    from evdplanner.geometry import Mesh
-    from evdplanner.linalg import Vec3
-    from evdplanner.markups import MarkupManager
-    from evdplanner.network import PointRegressor
     from evdplanner.network.training import LightningWrapper, OptimizableModel
     from evdplanner.network.transforms import default_load_transforms
-    from evdplanner.rendering import Camera, CameraType, IntersectionSort
-    from evdplanner.rendering.utils import normalize_image
 
     set_verbosity(verbose)
 
     if gpu_renderer:
         logger.info("Using GPU renderer.")
-        from evdplanner.rendering.gpu import GPURenderer as Renderer
     else:
         logger.info("Using CPU renderer.")
-        from evdplanner.rendering import CPURenderer as Renderer
 
     logger.info("Loading model...")
-    device = torch.device("cuda" if gpu_model else "cpu")
-    model: OptimizableModel = torch.load(model_path, map_location=device)
+    device = device("cuda" if gpu_model else "cpu")
+    model: OptimizableModel = load(model_path, map_location=device)
+    model.eval()
     resolution = model.in_shape
 
-    model: LightningWrapper = LightningWrapper(model)
-    model.eval()
-
     logger.debug(f"Model resolution: {resolution}")
-    logger.info("Loading mesh...")
-    mesh = Mesh.load(str(mesh), num_samples=10_000_000)
 
-    logger.info("Creating camera...")
-    camera = Camera(
-        origin=mesh.origin,
-        forward=Vec3(0.0, -1.0, 0.0),
-        up=Vec3(0.0, 0.0, 1.0),
-        x_resolution=resolution[0],
-        y_resolution=resolution[1],
-        camera_type=CameraType.Equirectangular,
+    logger.info("Loading images...")
+    images = {}
+    for image_type, image_path in input_images:
+        logger.debug(f"Loading {image_type} image from {image_path}.")
+        if "depth" in image_type:
+            images["map_depth"] = image_path
+        elif "normal" in image_type:
+            images["map_normal"] = image_path
+        else:
+            msg = f"Unknown image type: {image_type}."
+            logger.error(msg)
+            raise ValueError(msg)
+
+    transforms = Compose(
+        default_load_transforms(
+            maps=list(images.keys()),
+            allow_missing_keys=True,
+        )
     )
-
-    logger.info("Creating renderer...")
-    renderer = Renderer(
-        camera=camera,
-        mesh=mesh,
-    )
-
-    logger.info("Rendering...")
-    image = renderer.render(IntersectionSort.Farthest)
-    logger.debug(f"Image shape: {image.shape}")
-
-    logger.info("Saving images...")
-    depth_image = image[..., 0]
-    normal_image = image[..., 1:]
-
-    logger.debug("Normalizing images...")
-    depth_image = normalize_image(depth_image)
-    depth_image = depth_image[..., np.newaxis]
-    normal_image = normalize_image(normal_image, lower_percentile=0.0, upper_percentile=100.0)
-
-    image = np.concatenate([depth_image, normal_image], axis=-1)
-    logger.debug(f"Image shape: {image.shape}")
-    image = np.transpose(image, (2, 1, 0))
-    logger.debug(f"Image shape: {image.shape}")
-
-    # Normalize the image to [-1, 1] range.
-    image *= 2
-    image -= 1
-
+    image = transforms(images)["image"]
     logger.debug(f"Image shape: {image.shape}, dtype: {image.dtype}")
-
-    image = torch.from_numpy(image).float()
+    image = image[None, ...]
     image = image.to(device)
-    image = image.unsqueeze(0)
     logger.debug(f"Transformed image shape: {image.shape}, dtype: {image.dtype}")
 
     logger.info("Predicting...")
-    with torch.no_grad():
+    start = time()
+    with no_grad():
         prediction = model(image).squeeze().cpu().numpy()
-    logger.debug(f"Prediction: {prediction}")
+    delta = time() - start
+    logger.info(f"Prediction took {delta:.2f}s.")
 
-    keypoints = model.model.keypoints
-    logger.debug(f"Keypoints: {keypoints}")
-
-    intersections = []
+    keypoints = model.keypoints
+    projections = []
     for keypoint, pred in zip(keypoints, prediction):
         logger.debug(f"{keypoint}: {pred}")
-        ray = camera.cast_ray(int(pred[0] * resolution[1]), int(pred[1] * resolution[0]))
-        logger.debug(f"{keypoint} ray: {ray}")
+        projections.append(
+            {
+                "label": keypoint,
+                "position": pred.tolist(),
+            }
+        )
 
-        intersection = mesh.intersect(ray, IntersectionSort.Farthest)
-
-        if intersection:
-            logger.debug(f"{keypoint} intersection: {intersection.position.as_float_list()}")
-            intersections.append(intersection.position.as_float_list())
-
-    logger.info("Creating markups...")
-    markups = MarkupManager()
-    markups.add_fiducial(
-        label=keypoints,
-        description=keypoints,
-        position=intersections,
-    )
-
-    logger.info("Saving markups...")
+    logger.info(f"Saving projections to {output_path}.")
     with open(output_path, "w") as f:
-        json.dump(markups.to_dict(), f)
+        json.dump(projections, f, indent=4)
