@@ -3,7 +3,7 @@ Mesh class for representing 3D triangle meshes.
 """
 import numpy as np
 
-from evdplanner.rs import Intersection, IntersectionSort, Ray, Vec3
+from evdplanner.rs import Deformer, Intersection, IntersectionSort, Mat4, Ray, Vec3
 
 class Triangle:
     """
@@ -91,6 +91,32 @@ class Mesh:
         -------
         None
         """
+    def transform(self, transform: Mat4) -> None:
+        """
+        Transform the mesh.
+
+        Parameters
+        ----------
+        transform : Mat4
+            Transformation matrix.
+
+        Returns
+        -------
+        None
+        """
+    def deform(self, deform: Deformer) -> None:
+        """
+        Deform the mesh.
+
+        Parameters
+        ----------
+        deform : Deformer
+            Deformer that defines the noise characteristics.
+
+        Returns
+        -------
+        None
+        """
     def recalculate_normals(self) -> None:
         """
         Recalculate the normals of the triangles.
@@ -128,6 +154,14 @@ class Mesh:
         ----------
         num_samples : int, optional
             Number of samples to use for origin calculation, by default 1_000_000.
+
+        Returns
+        -------
+        None
+        """
+    def update_triangles(self) -> None:
+        """
+        Update the triangles of the mesh.
 
         Returns
         -------

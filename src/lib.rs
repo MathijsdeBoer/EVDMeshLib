@@ -10,6 +10,7 @@ fn rs(_py: Python, m: &PyModule) -> PyResult<()> {
     linalg::init_linalg(_py, m)?;
     rendering::init_rendering(_py, m)?;
 
+    m.add_class::<geometry::Deformer>()?;
     m.add_class::<geometry::Mesh>()?;
     m.add_class::<linalg::Vec3>()?;
     m.add_class::<linalg::Mat4>()?;

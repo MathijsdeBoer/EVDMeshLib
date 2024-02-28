@@ -154,7 +154,7 @@ def mesh(
     from loguru import logger
 
     from evdplanner.cli import set_verbosity
-    from evdplanner.geometry import Mesh
+    from evdplanner.geometry import Deformer, Mesh
     from evdplanner.linalg import Mat4
     from evdplanner.markups import MarkupManager
 
@@ -207,7 +207,6 @@ def mesh(
     logger.info(f"Loading mesh from {input_mesh}.")
     m = Mesh.load(str(input_mesh))
     logger.debug(f"Mesh origin: {m.origin}.")
-    logger.debug(f"Number of vertices: {m.num_vertices}.")
     logger.debug(f"Number of triangles: {m.num_triangles}.")
 
     logger.info(f"Loading keypoints from {keypoints_path}.")
@@ -232,7 +231,7 @@ def mesh(
         )
 
         logger.debug(f"Rotating mesh vertices.")
-        m.vertices = [v @ matrix for v in m.vertices]
+        m.transform(matrix)
 
         logger.debug(f"Rotating keypoints.")
         for mark in keypoints.markups:
@@ -254,22 +253,16 @@ def mesh(
         logger.debug(f"Deform persistence: {deform_persistence}.")
         logger.debug(f"Deform lacunarity: {deform_lacunarity}.")
 
-        generator = opensimplex.OpenSimplex(seed)
-
-        m.vertices = [
-            v
-            + _generate_noise(
-                position=v,
-                generator=generator,
-                amplitude=deform_amplitude,
-                frequency=deform_frequency,
-                octaves=deform_octaves,
-                persistence=deform_persistence,
-                lacunarity=deform_lacunarity,
-            )
-            * deform_scale
-            for v in m.vertices
-        ]
+        deformer = Deformer(
+            scale=deform_scale,
+            amplitude=deform_amplitude,
+            frequency=deform_frequency,
+            octaves=deform_octaves,
+            persistence=deform_persistence,
+            lacunarity=deform_lacunarity,
+            seed=seed,
+        )
+        m.deform(deformer)
 
         for mark in keypoints.markups:
             logger.debug(f"Deforming control points for {mark.markup_type}.")
@@ -277,18 +270,7 @@ def mesh(
                 logger.debug(f"Deforming control point {point.label}.")
                 logger.debug(f"Old position: {point.position}.")
                 p = Vec3(*point.position)
-                noise = (
-                    _generate_noise(
-                        position=p,
-                        generator=generator,
-                        amplitude=deform_amplitude,
-                        frequency=deform_frequency,
-                        octaves=deform_octaves,
-                        persistence=deform_persistence,
-                        lacunarity=deform_lacunarity,
-                    )
-                    * deform_scale
-                )
+                noise = deformer.deform_vertex(p)
                 p += noise
                 point.position = [p.x, p.y, p.z]
                 logger.debug(f"New position: {point.position}.")
@@ -297,9 +279,7 @@ def mesh(
         output.parent.mkdir(parents=True)
 
     logger.info(f"Saving mesh to {output}.")
-    m.recalculate_origin(10_000_000)
-    m.recalculate_areas()
-    m.recalculate_normals()
+    m.recalculate(1_000_000)
     m.save(str(output))
 
     keypoint_output = output.parent / keypoints_path.name

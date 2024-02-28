@@ -1,7 +1,7 @@
 """
 Rust core bindings.
 """
-from .geometry import Mesh
+from .geometry import Deformer, Mesh
 from .linalg import Mat4, Vec3
 from .rendering import (
     Camera,
@@ -15,6 +15,7 @@ from .rendering import (
 __all__ = [
     "Camera",
     "CameraType",
+    "Deformer",
     "Mesh",
     "Intersection",
     "IntersectionSort",

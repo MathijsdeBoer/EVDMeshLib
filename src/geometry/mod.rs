@@ -1,11 +1,14 @@
+mod deformer;
 mod mesh;
 
+pub use deformer::Deformer;
 pub use mesh::{Mesh, Triangle};
 
 use pyo3::prelude::*;
 
 #[pymodule]
 fn geometry(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Deformer>()?;
     m.add_class::<Mesh>()?;
     m.add_class::<Triangle>()?;
     Ok(())

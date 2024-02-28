@@ -1,8 +1,7 @@
 """
 Rust geometry module.
 """
-from .aabb import Aabb
-from .bvh import Bvh
+from .deformer import Deformer
 from .mesh import Mesh
 
-__all__ = ["Aabb", "Bvh", "Mesh"]
+__all__ = ["Deformer", "Mesh"]
