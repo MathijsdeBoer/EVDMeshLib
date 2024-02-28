@@ -94,24 +94,22 @@ impl Camera {
                     size,
                 }
             }
-            CameraType::Equirectangular => {
-                Self {
-                    origin,
-                    forward,
-                    left,
-                    up,
-                    x_resolution,
-                    y_resolution,
-                    camera_type,
-                    fov: 0.0,
-                    aspect_ratio: 0.0,
-                    size: 0.0,
-                }
-            }
+            CameraType::Equirectangular => Self {
+                origin,
+                forward,
+                left,
+                up,
+                x_resolution,
+                y_resolution,
+                camera_type,
+                fov: 0.0,
+                aspect_ratio: 0.0,
+                size: 0.0,
+            },
         }
     }
 
-    pub fn cast_ray(&self, x: usize, y: usize) -> Ray {
+    pub fn cast_ray(&self, x: f64, y: f64) -> Ray {
         match self.camera_type {
             CameraType::Perspective => {
                 let origin = self.origin;
@@ -125,47 +123,40 @@ impl Camera {
                 let plane_height = plane_width / self.aspect_ratio;
 
                 // find the position of the pixel on the plane
-                let x = (x as f64 / self.x_resolution as f64 - 0.5) * plane_width;
-                let y = (y as f64 / self.y_resolution as f64 - 0.5) * plane_height;
+                let x = (x / self.x_resolution as f64 - 0.5) * plane_width;
+                let y = (y / self.y_resolution as f64 - 0.5) * plane_height;
                 let plane_position = left * x + up * y + forward * plane_distance;
 
-                Ray::new(
-                    origin,
-                    (plane_position - origin).unit_vector(),
-                )
+                Ray::new(origin, (plane_position - origin).unit_vector())
             }
             CameraType::Orthographic => {
                 let forward = self.forward;
                 let left = self.left;
                 let up = self.up;
 
-                let x = (x as f64 / self.x_resolution as f64 - 0.5) * self.size * self.aspect_ratio;
-                let y = (y as f64 / self.y_resolution as f64 - 0.5) * self.size;
+                let x = (x / self.x_resolution as f64 - 0.5) * self.size * self.aspect_ratio;
+                let y = (y / self.y_resolution as f64 - 0.5) * self.size;
 
-                Ray::new(
-                    self.origin + left * x + up * y,
-                    forward,
-                )
+                Ray::new(self.origin + left * x + up * y, forward)
             }
             CameraType::Equirectangular => {
                 // Spherical sampling adapted from
                 // https://www.pbr-book.org/3ed-2018/Camera_Models/Environment_Camera
 
                 // Phi is pretty straightforward
-                let phi: f64 = PI * (y as f64 / self.y_resolution as f64);
+                let phi: f64 = PI * (y / self.y_resolution as f64);
 
                 // We want to ensure that the middle of the image (0.5, 0.5) maps to the forward
                 // direction, so we need to subtract 0.5 * PI from theta.
-                let theta: f64 = TWO_PI * (x as f64 / self.x_resolution as f64) - HALF_PI;
+                let theta: f64 = TWO_PI * (x / self.x_resolution as f64) - HALF_PI;
 
                 // Direction in spherical coordinates
                 let spherical = Vec3::new(1.0, theta, phi);
                 // Direction in camera space
                 let camera_dir = Vec3::spherical_to_cartesian(&spherical).unit_vector();
                 // Direction in world space, based on camera orientation
-                let world_dir = self.left * camera_dir.x
-                    + self.forward * camera_dir.y
-                    + self.up * camera_dir.z;
+                let world_dir =
+                    self.left * camera_dir.x + self.forward * camera_dir.y + self.up * camera_dir.z;
 
                 Ray::new(self.origin, world_dir)
             }
@@ -182,7 +173,8 @@ impl Camera {
                 let back_direction = -self.forward;
 
                 // Ray-plane intersection
-                let t = (*point - self.origin).dot(&self.forward) / back_direction.dot(&self.forward);
+                let t =
+                    (*point - self.origin).dot(&self.forward) / back_direction.dot(&self.forward);
                 let intersection = *point + back_direction * t;
 
                 // Find the position of the pixel on the plane,
@@ -265,10 +257,11 @@ mod test {
         ];
 
         for (x, y, expected_direction) in directions {
-            let ray = camera.cast_ray(x, y);
+            let ray = camera.cast_ray(x as f64, y as f64);
             assert_eq!(
                 ray.direction, expected_direction,
-                "Testing pixel ({}, {})", x, y
+                "Testing pixel ({}, {})",
+                x, y
             );
         }
     }
@@ -307,10 +300,11 @@ mod test {
         ];
 
         for (x, y, expected_direction) in directions {
-            let ray = camera.cast_ray(x, y);
+            let ray = camera.cast_ray(x as f64, y as f64);
             assert_eq!(
                 ray.direction, expected_direction,
-                "Testing pixel ({}, {})", x, y
+                "Testing pixel ({}, {})",
+                x, y
             );
         }
     }
@@ -332,18 +326,14 @@ mod test {
         let points = vec![
             (Vec3::new(0.0, 0.0, 1.0), (0.25, 0.0)),
             (Vec3::new(0.0, 0.0, -1.0), (0.25, 1.0)),
-
             (Vec3::new(0.0, 1.0, 0.0), (0.0, 0.5)),
             (Vec3::new(0.0, -1.0, 0.0), (0.5, 0.5)),
-
             (Vec3::new(1.0, 0.0, 0.0), (0.25, 0.5)),
             (Vec3::new(-1.0, 0.0, 0.0), (0.75, 0.5)),
-
             (Vec3::new(0.0, -1.0, 1.0), (0.5, 0.25)),
             (Vec3::new(0.0, 1.0, 1.0), (0.0, 0.25)),
             (Vec3::new(1.0, 0.0, 1.0), (0.25, 0.25)),
             (Vec3::new(-1.0, 0.0, 1.0), (0.75, 0.25)),
-
             (Vec3::new(0.0, -1.0, -1.0), (0.5, 0.75)),
             (Vec3::new(0.0, 1.0, -1.0), (0.0, 0.75)),
             (Vec3::new(1.0, 0.0, -1.0), (0.25, 0.75)),
@@ -352,8 +342,10 @@ mod test {
 
         for (point, (x, y)) in points {
             assert_eq!(
-                camera.project_back(&point, true), (x, y),
-                "Testing point {:?}", point
+                camera.project_back(&point, true),
+                (x, y),
+                "Testing point {:?}",
+                point
             );
         }
     }

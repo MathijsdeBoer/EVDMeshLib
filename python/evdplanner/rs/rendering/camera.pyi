@@ -96,7 +96,7 @@ class Camera:
         size : float, optional
             The size of the camera. Only used for orthographic cameras.
         """
-    def cast_ray(self, x: int, y: int) -> Ray:
+    def cast_ray(self, x: float, y: float) -> Ray:
         """
         Cast a ray from the camera through the specified pixel.
 
