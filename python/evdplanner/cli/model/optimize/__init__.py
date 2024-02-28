@@ -116,7 +116,6 @@ def optimize(
     test_root: Path | None = None,
     initial_config: Path | None = None,
     seed: int | None = None,
-    resolution: int = 1024,
     num_workers: int = 0,
     verbose: int = 0,
     final_bias: Path | None = None,
@@ -144,8 +143,6 @@ def optimize(
         Path to initial configuration file.
     seed : int, optional
         Seed for random number generator.
-    resolution : int, optional
-        Resolution of input images.
     num_workers : int, optional
         Number of workers for data loading.
     verbose : int, optional
@@ -158,6 +155,7 @@ def optimize(
     None
     """
     import json
+    from functools import partial
     from math import pi
     from random import sample
 
@@ -194,44 +192,7 @@ def optimize(
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
-    logger.info(f"Collecting data from {train_root}.")
-    train_samples, maps, keypoints = get_data(
-        train_root,
-        anatomy,
-        output_label_key="keypoints",
-    )
-
-    if val_root:
-        logger.info(f"Collecting data from {val_root}.")
-        val_samples, _, _ = get_data(val_root, anatomy)
-    else:
-        logger.warning("No validation data provided. Using 20% of training data for validation.")
-        val_samples = sample(train_samples, int(0.2 * len(train_samples)))
-
-    if test_root:
-        logger.info(f"Collecting data from {test_root}.")
-        test_samples, _, _ = get_data(test_root, anatomy)
-    else:
-        logger.warning("No test data provided. Using validation data for testing.")
-        test_samples = None
-
-    if final_bias and final_bias.exists():
-        logger.info(f"Loading initial weights for final layer from {final_bias}.")
-        with final_bias.open("r") as file:
-            final_bias = json.load(file)
-
-        bias = []
-        for key in keypoints:
-            for b in final_bias:
-                if b["label"] == key:
-                    bias.append(b["position"])
-                    break
-        final_bias = bias
-    elif final_bias:
-        logger.warning(f"File {final_bias} does not exist. Ignoring.")
-        final_bias = None
-
-    def _objective(trial: optuna.Trial) -> float:
+    def _objective(trial: optuna.Trial, final_bias: Path | None) -> float:
         """
         Objective function for optuna optimization.
 
@@ -247,6 +208,56 @@ def optimize(
         """
         if seed:
             pl.seed_everything(seed)
+
+        resolution = trial.suggest_categorical("resolution", [256, 512, 1024, 2048, 4096])
+
+        logger.info(f"Collecting data from {train_root}.")
+        train_samples, maps, keypoints = get_data(
+            train_root,
+            anatomy,
+            output_label_key="keypoints",
+            resolution=resolution,
+        )
+
+        if val_root:
+            logger.info(f"Collecting data from {val_root}.")
+            val_samples, _, _ = get_data(
+                val_root,
+                anatomy,
+                resolution=resolution,
+            )
+        else:
+            logger.warning(
+                "No validation data provided. Using 20% of training data for validation."
+            )
+            val_samples = sample(train_samples, int(0.2 * len(train_samples)))
+
+        if test_root:
+            logger.info(f"Collecting data from {test_root}.")
+            test_samples, _, _ = get_data(
+                test_root,
+                anatomy,
+                resolution=resolution,
+            )
+        else:
+            logger.warning("No test data provided. Using validation data for testing.")
+            test_samples = None
+
+        if final_bias and final_bias.exists():
+            logger.info(f"Loading initial weights for final layer from {final_bias}.")
+            with final_bias.open("r") as file:
+                final_bias = json.load(file)
+
+            bias = []
+            for key in keypoints:
+                for b in final_bias:
+                    if b["label"] == key:
+                        bias.append(b["position"])
+                        break
+            final_bias = bias
+        elif final_bias:
+            logger.warning(f"File {final_bias} does not exist. Ignoring.")
+            final_bias = None
 
         batch_size = trial.suggest_int("batch_size", 1, 32)
         logger.debug(f"batch_size: {batch_size}")
@@ -353,7 +364,7 @@ def optimize(
 
     logger.info("Starting optimization.")
     study.optimize(
-        _objective,
+        partial(_objective, final_bias=final_bias),
         n_trials=n_trials,
         catch=[torch.cuda.OutOfMemoryError, RuntimeError],
         gc_after_trial=True,

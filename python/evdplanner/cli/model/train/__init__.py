@@ -235,16 +235,17 @@ def train(
         train_root,
         anatomy,
         output_label_key="keypoints",
+        resolution=resolution,
     )
 
     if augment_root:
         logger.info(f"Collecting data from {augment_root}.")
-        augment_samples, _, _ = get_data(augment_root, anatomy)
+        augment_samples, _, _ = get_data(augment_root, anatomy, resolution=resolution)
         train_samples += augment_samples
 
     if val_root:
         logger.info(f"Collecting data from {val_root}.")
-        val_samples, _, _ = get_data(val_root, anatomy)
+        val_samples, _, _ = get_data(val_root, anatomy, resolution=resolution)
     else:
         logger.warning("No validation data provided. Using 20% of training data for validation.")
         val_samples = sample(train_samples, int(0.2 * len(train_samples)))
@@ -252,7 +253,7 @@ def train(
 
     if test_root:
         logger.info(f"Collecting data from {test_root}.")
-        test_samples, _, _ = get_data(test_root, anatomy)
+        test_samples, _, _ = get_data(test_root, anatomy, resolution=resolution)
     else:
         logger.info("No test data provided. Using validation data for testing.")
         test_samples = None

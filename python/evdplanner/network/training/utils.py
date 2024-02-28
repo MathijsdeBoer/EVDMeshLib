@@ -177,6 +177,7 @@ def get_data(
     label_file: str = "projected_{anatomy}.kp.json",
     output_image_keys: tuple[str] = ("map_{anatomy}_depth", "map_{anatomy}_normal"),
     output_label_key: str = "keypoints",
+    resolution: int = 1024,
 ) -> tuple[list[dict[str, Path]], list[str], list[str]]:
     """
     Get the data.
@@ -214,8 +215,11 @@ def get_data(
         if not subdir.is_dir():
             continue
 
-        images = [subdir / file.format(anatomy=anatomy) for file in image_files]
-        label = subdir / label_file.format(anatomy=anatomy)
+        images = [
+            subdir / "maps" / f"{resolution}" / file.format(anatomy=anatomy)
+            for file in image_files
+        ]
+        label = subdir / "maps" / f"{resolution}" / label_file.format(anatomy=anatomy)
 
         if not all([file.exists() for file in images]) or not label.exists():
             continue
