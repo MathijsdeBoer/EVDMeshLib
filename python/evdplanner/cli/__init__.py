@@ -13,6 +13,7 @@ from evdplanner.cli.model import model
 from evdplanner.cli.plan import plan
 from evdplanner.cli.plot import plot
 from evdplanner.cli.preprocessing import preprocess
+from evdplanner.cli.validate import validate
 
 
 @click.group()
@@ -37,6 +38,7 @@ cli.add_command(model)
 cli.add_command(plan)
 cli.add_command(plot)
 cli.add_command(preprocess)
+cli.add_command(validate)
 
 
 def set_verbosity(level: int) -> None:
