@@ -161,7 +161,7 @@ def mesh(
     set_verbosity(verbosity)
 
     if not seed:
-        seed = random.randint(-1_000_000_000, 1_000_000_000)
+        seed = random.randint(0, 1_000_000_000)
         logger.debug(f"Seed not provided. Using random seed {seed}.")
     random.seed(seed)
 
@@ -270,9 +270,8 @@ def mesh(
                 logger.debug(f"Deforming control point {point.label}.")
                 logger.debug(f"Old position: {point.position}.")
                 p = Vec3(*point.position)
-                noise = deformer.deform_vertex(p)
-                p += noise
-                point.position = [p.x, p.y, p.z]
+                p = deformer.deform_vertex(p)
+                point.position = p.as_float_list()
                 logger.debug(f"New position: {point.position}.")
 
     if not output.parent.exists():
