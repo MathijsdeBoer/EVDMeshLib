@@ -28,6 +28,7 @@ class Fiducial:
     label: str
     description: str
     position: list[float] | None = None
+    locked: bool = True
     visible: bool = True
 
     @staticmethod
@@ -50,6 +51,7 @@ class Fiducial:
             label=data["label"],
             description=data["description"],
             position=data["position"],
+            locked=data["locked"],
             visible=data["visibility"],
         )
 
@@ -80,7 +82,7 @@ class Fiducial:
                 1.0,
             ],
             "selected": True,
-            "locked": True,
+            "locked": self.locked,
             "visibility": self.visible,
             "positionStatus": "defined" if self.position else "undefined",
         }
