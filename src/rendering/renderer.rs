@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 
 use crate::geometry::Mesh;
-use crate::rendering::{Camera, Intersection, IntersectionSort, Ray};
+use crate::rendering::{Camera, Intersection, IntersectionSort};
 
 #[pyclass(name = "CPURenderer", subclass)]
 pub struct Renderer {
@@ -44,24 +44,15 @@ impl Renderer {
             )
             .unwrap(),
         );
-        bar.set_message("Preparing Rays");
-        let rays: Vec<(usize, usize, Ray)> = image_pixels
+        bar.set_message("Intersecting Rays");
+        bar.set_position(0);
+        let values: Vec<((usize, usize), Option<Intersection>)> = image_pixels
             .par_iter()
             .map(|(y, x)| {
                 bar.inc(1);
-                (*y, *x, self.camera.cast_ray(*x as f64, *y as f64))
-            })
-            .collect();
-
-        bar.set_message("Intersecting Rays");
-        bar.set_position(0);
-        let values: Vec<((usize, usize), Option<Intersection>)> = rays
-            .par_iter()
-            .map(|(y, x, ray)| {
-                bar.inc(1);
                 (
                     (*y, *x),
-                    self.mesh.intersect(ray, intersection_mode, epsilon),
+                    self.mesh.intersect(&self.camera.cast_ray(*x as f64, *y as f64), intersection_mode, epsilon),
                 )
             })
             .collect();
