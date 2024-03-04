@@ -209,7 +209,7 @@ def optimize(
         if seed:
             pl.seed_everything(seed)
 
-        resolution = trial.suggest_categorical("resolution", [256, 512, 1024, 2048, 4096])
+        resolution = trial.suggest_categorical("resolution", [256, 512, 1024, 2048, 4096, 8192, 16384])
 
         logger.info(f"Collecting data from {train_root}.")
         train_samples, maps, keypoints = get_data(
