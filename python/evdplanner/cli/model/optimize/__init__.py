@@ -81,12 +81,6 @@ import click
     help="Seed for random number generator.",
 )
 @click.option(
-    "--resolution",
-    type=int,
-    default=1024,
-    help="Resolution of input images.",
-)
-@click.option(
     "--num-workers",
     type=int,
     default=0,
@@ -97,6 +91,17 @@ import click
     "--verbose",
     count=True,
     help="Increase verbosity. (Use multiple times for more verbosity.)",
+)
+@click.option(
+    "--use-maps",
+    is_flag=True,
+    help="Whether to use pre-rendered maps or not.",
+)
+@click.option(
+    "--augmentations",
+    "use_augmentations",
+    is_flag=True,
+    help="Whether to use augmentations or not.",
 )
 @click.option(
     "--final-bias",
@@ -118,6 +123,8 @@ def optimize(
     seed: int | None = None,
     num_workers: int = 0,
     verbose: int = 0,
+    use_maps: bool = False,
+    use_augmentations: bool = False,
     final_bias: Path | None = None,
 ) -> None:
     """
@@ -147,6 +154,10 @@ def optimize(
         Number of workers for data loading.
     verbose : int, optional
         Increase verbosity. (Use multiple times for more verbosity.)
+    use_maps : bool, optional
+        Whether to use pre-rendered maps or not.
+    use_augmentations : bool, optional
+        Whether to use augmentations or not.
     final_bias : Path, optional
         Path to a file containing the initial weights for the final layer.
 
@@ -180,6 +191,7 @@ def optimize(
     from evdplanner.network.transforms.defaults import (
         default_augment_transforms,
         default_load_transforms,
+        default_mesh_load_transforms,
     )
 
     set_verbosity(verbose)
@@ -209,13 +221,15 @@ def optimize(
         if seed:
             pl.seed_everything(seed)
 
-        resolution = trial.suggest_categorical("resolution", [256, 512, 1024, 2048, 4096, 8192, 16384])
+        resolution = trial.suggest_categorical(
+            "resolution", [256, 512, 1024, 2048, 4096, 8192, 16384]
+        )
 
         logger.info(f"Collecting data from {train_root}.")
-        train_samples, maps, keypoints = get_data(
+        train_samples, maps, label_names = get_data(
             train_root,
             anatomy,
-            output_label_key="keypoints",
+            use_maps=use_maps,
             resolution=resolution,
         )
 
@@ -224,6 +238,7 @@ def optimize(
             val_samples, _, _ = get_data(
                 val_root,
                 anatomy,
+                use_maps=use_maps,
                 resolution=resolution,
             )
         else:
@@ -237,6 +252,7 @@ def optimize(
             test_samples, _, _ = get_data(
                 test_root,
                 anatomy,
+                use_maps=use_maps,
                 resolution=resolution,
             )
         else:
@@ -249,7 +265,7 @@ def optimize(
                 final_bias = json.load(file)
 
             bias = []
-            for key in keypoints:
+            for key in label_names:
                 for b in final_bias:
                     if b["label"] == key:
                         bias.append(b["position"])
@@ -261,18 +277,6 @@ def optimize(
 
         batch_size = trial.suggest_int("batch_size", 1, 32)
         logger.debug(f"batch_size: {batch_size}")
-
-        dm = EVDPlannerDataModule(
-            train_samples=train_samples,
-            val_samples=val_samples,
-            maps=maps,
-            keypoints_key="keypoints",
-            test_samples=test_samples,
-            load_transforms=default_load_transforms(maps, keypoints),
-            augment_transforms=default_augment_transforms(),
-            batch_size=batch_size,
-            num_workers=num_workers,
-        )
 
         if anatomy == "skin":
             logger.debug("Setting ranges for skin.")
@@ -291,6 +295,22 @@ def optimize(
             logger.error(msg)
             raise ValueError(msg)
 
+        dm = EVDPlannerDataModule(
+            train_samples=train_samples,
+            val_samples=val_samples,
+            test_samples=test_samples,
+            load_transforms=default_load_transforms(maps, label_names)
+            if use_maps
+            else default_mesh_load_transforms(
+                x_resolution=x_resolution,
+                y_resolution=y_resolution,
+                include_augmentations=use_augmentations,
+            ),
+            augment_transforms=default_augment_transforms() if use_augmentations else None,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        )
+
         metrics = [
             MAEMetric(),
             MSEMetric(),
@@ -307,10 +327,10 @@ def optimize(
             trial=trial,
             metrics=metrics,
             maps=maps,
-            keypoints=keypoints,
+            keypoints=label_names,
             epochs=epochs,
             in_shape=(4, x_resolution, y_resolution),
-            out_shape=(len(keypoints), 2),
+            out_shape=(len(label_names), 2),
             final_bias=final_bias,
         )
         logger.debug(f"Setting input shape to (1, 4, {x_resolution}, {y_resolution}).")
