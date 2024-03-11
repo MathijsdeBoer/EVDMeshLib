@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import torch
+from imageio.v3 import imread
+from loguru import logger
 from monai.metrics import MAEMetric, MSEMetric
 from torch import Tensor, nn, optim
 
@@ -201,6 +203,11 @@ def _get_maps(
 
         if not all([file.exists() for file in images]) or not label.exists():
             continue
+
+        for image in images:
+            im = imread(image)
+            if im.shape[1] != resolution:
+                logger.warning(f"Image {image} has a different x resolution ({im.shape[1]}, {im.shape[0]}) than {resolution}.")
 
         if not maps:
             maps = [file.stem for file in images]
