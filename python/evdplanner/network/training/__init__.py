@@ -1,5 +1,5 @@
 """
-This module contains the training utilities for the EVDPlanner network.
+Training utilities for the EVDPlanner network.
 """
 from evdplanner.network.lightning_wrapper import LightningWrapper
 from evdplanner.network.training.datamodule import EVDPlannerDataModule

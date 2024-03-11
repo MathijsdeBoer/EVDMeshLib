@@ -13,7 +13,7 @@ def test_skin_point_regressor(
     resolution: int,
     initial_filters: int,
     num_res_units: int,
-):
+) -> None:
     maps = ["one", "two"]
     keypoints = ["one", "two", "three"]
 

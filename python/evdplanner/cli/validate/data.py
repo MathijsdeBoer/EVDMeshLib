@@ -97,7 +97,7 @@ def data(
             continue
 
         invalid_position = False
-        for idx, (name, position) in enumerate(zip(landmark_names, positions)):
+        for idx, (name, position) in enumerate(zip(landmark_names, positions, strict=True)):
             logger.debug(f"{subdir}: Landmark {name} positions: {position}")
             if len(position) != 3:
                 logger.error(f"{subdir}: Landmark {name} position has invalid length: {positions}")
@@ -129,7 +129,7 @@ def data(
             )
 
             projections = {}
-            for name, position in zip(landmark_names, positions):
+            for name, position in zip(landmark_names, positions, strict=True):
                 logger.debug(f"{subdir}: Projecting landmark {name} position {position}...")
                 projection = camera.project_back(position)
                 projections[name] = projection

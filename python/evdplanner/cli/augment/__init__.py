@@ -1,3 +1,7 @@
+"""
+Data augmentation commands.
+"""
+
 import click
 
 from evdplanner.cli.augment.mesh import mesh

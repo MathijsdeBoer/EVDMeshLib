@@ -1,3 +1,7 @@
+"""
+CLI command for measuring Kocher points.
+"""
+
 from pathlib import Path
 
 import click
@@ -49,7 +53,10 @@ def kocher(
     n_angles: int = 1000,
     debug: bool = False,
     verbosity: int = 0,
-):
+) -> None:
+    """
+    Measure Kocher points on a mesh using landmarks.
+    """
     from loguru import logger
 
     from evdplanner.cli import set_verbosity

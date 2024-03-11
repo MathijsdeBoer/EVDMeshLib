@@ -10,7 +10,7 @@ def generate_landmarks(
     intersection_sort: IntersectionSort,
 ) -> list[Vec3]:
     points = []
-    for i, (u, v) in enumerate(projection):
+    for u, v in projection:
         ray = camera.cast_ray(u, v)
         point = mesh.intersect(ray, intersection_sort)
         points.append(point.position)

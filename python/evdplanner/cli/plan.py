@@ -116,13 +116,9 @@ def plan(
     """
     from time import time
 
-    start = time()
-
     from loguru import logger
     from monai.transforms import Compose
-    from torch import device
-    from torch import load as load_torch_model
-    from torch import no_grad, transpose
+    from torch import device, load, no_grad, transpose
 
     from evdplanner.cli import set_verbosity
     from evdplanner.generation import generate_landmarks, measure_kocher
@@ -134,6 +130,8 @@ def plan(
     from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
+    start = time()
+
     # Set the verbosity level
     set_verbosity(verbose)
 
@@ -142,7 +140,7 @@ def plan(
 
     logger.info("Loading skin model...")
     device = device("cuda" if gpu_model else "cpu")
-    skin_model: PointRegressor = load_torch_model(skin_model, map_location=device)
+    skin_model: PointRegressor = load(skin_model, map_location=device)
     skin_model.eval()
 
     logger.debug("Skin model:")
@@ -208,7 +206,7 @@ def plan(
         skin_input = skin_input.to(device)
         skin_landmarks = skin_model(skin_input).squeeze().cpu().numpy()
 
-    for keypoint, pred in zip(skin_model.keypoints, skin_landmarks):
+    for keypoint, pred in zip(skin_model.keypoints, skin_landmarks, strict=True):
         logger.debug(f"{keypoint}: {pred}")
 
     if write_intermediate:
@@ -238,15 +236,15 @@ def plan(
         intersection_sort=IntersectionSort.Farthest,
     )
 
-    for point, label in zip(lm, skin_model.keypoints):
+    for point, label in zip(lm, skin_model.keypoints, strict=True):
         logger.debug(f"Found {label} at {point}.")
 
     if write_intermediate:
         logger.info("Writing intermediate results...")
         manager = MarkupManager()
         manager.add_fiducial(
-            label=[label for label in skin_model.keypoints],
-            description=[label for label in skin_model.keypoints],
+            label=skin_model.keypoints,
+            description=skin_model.keypoints,
             position=[(point.x, point.y, point.z) for point in lm],
             display=DisplaySettings(
                 color=(1, 0, 0),

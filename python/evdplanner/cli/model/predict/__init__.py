@@ -137,7 +137,7 @@ def predict(
 
     keypoints = model.keypoints
     projections = []
-    for keypoint, pred in zip(keypoints, prediction):
+    for keypoint, pred in zip(keypoints, prediction, strict=True):
         logger.debug(f"{keypoint}: {pred}")
         projections.append(
             {
@@ -147,5 +147,5 @@ def predict(
         )
 
     logger.info(f"Saving projections to {output_path}.")
-    with open(output_path, "w") as f:
+    with output_path.open("w") as f:
         json.dump(projections, f, indent=4)

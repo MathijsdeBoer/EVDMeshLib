@@ -4,6 +4,7 @@ Poly learning rate scheduler
 This is taken from the nnUNet V2 repository:
 nnunetv2/training/lr_scheduler/polylr.py
 """
+from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 
 
@@ -14,7 +15,7 @@ class PolyLRScheduler(LRScheduler):
 
     def __init__(
         self,
-        optimizer,
+        optimizer: Optimizer,
         initial_lr: float,
         max_steps: int,
         exponent: float = 0.9,
@@ -43,7 +44,7 @@ class PolyLRScheduler(LRScheduler):
         self.ctr = 0
         super().__init__(optimizer, current_step if current_step is not None else -1, False)
 
-    def step(self, current_step=None) -> None:
+    def step(self, current_step: int | None = None) -> None:
         """
         Step the learning rate.
 

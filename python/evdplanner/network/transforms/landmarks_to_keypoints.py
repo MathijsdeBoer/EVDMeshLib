@@ -37,7 +37,7 @@ class LandmarksToKeypointsd(mt.MapTransform):
         )
 
         keypoints = []
-        for i, landmark in enumerate(landmarks):
+        for landmark in landmarks:
             keypoints.append(camera.project_back(landmark))
 
         d[self.keypoints_key] = np.array(keypoints)

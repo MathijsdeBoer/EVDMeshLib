@@ -1,7 +1,6 @@
 """
 Project a mesh to a map.
 """
-from math import pi
 from pathlib import Path
 
 import click
@@ -301,13 +300,14 @@ def orthographic(
     sides_to_render: list[tuple[Vec3, str]] = []
     if not side:
         sides_to_render = [(left_kp, "left"), (right_kp, "right")]
+    elif side == "left":
+        sides_to_render.append((left_kp, "left"))
+    elif side == "right":
+        sides_to_render.append((right_kp, "right"))
     else:
-        if side == "left":
-            sides_to_render.append((left_kp, "left"))
-        elif side == "right":
-            sides_to_render.append((right_kp, "right"))
-        else:
-            raise ValueError(f"Invalid side: {side}")
+        msg = f"Invalid side: {side}"
+        logger.error(msg)
+        raise ValueError(msg)
 
     mesh = ctx.obj["mesh"]
     renders: list[tuple[str, np.ndarray]] = []

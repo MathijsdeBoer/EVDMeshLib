@@ -1,3 +1,6 @@
+"""
+CLI commands for generating EVD plans.
+"""
 import click
 
 from .kocher import kocher
@@ -5,7 +8,10 @@ from .landmarks import landmarks
 
 
 @click.group()
-def generate():
+def generate() -> None:
+    """
+    Generate EVD plans.
+    """
     pass
 
 

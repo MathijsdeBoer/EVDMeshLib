@@ -124,7 +124,7 @@ def get_lr_scheduler(
     lr_scheduler: optim.lr_scheduler.LRScheduler | str | None,
     optimizer: optim.Optimizer,
     epochs: int,
-    **kwargs: Any,
+    **kwargs: dict[str, Any],
 ) -> optim.lr_scheduler.LRScheduler | None:
     """
     Get the learning rate scheduler.

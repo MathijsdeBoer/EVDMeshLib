@@ -68,7 +68,7 @@ def landmarks(
     kocher: Path | None = None,
     side: str | None = None,
     verbose: int = 0,
-):
+) -> None:
     import json
 
     from loguru import logger
@@ -115,7 +115,7 @@ def landmarks(
                 intersection_sort=IntersectionSort.Farthest,
             )
 
-            for point, label in zip(lm, points.keys()):
+            for point, label in zip(lm, points.keys(), strict=True):
                 logger.debug(f"Adding {label} at {point}.")
                 fiducials_to_add.append((label, point))
         case "ventricles":
@@ -168,7 +168,7 @@ def landmarks(
                     intersection_sort=IntersectionSort.Farthest,
                 )
 
-                for point, label in zip(lm, current_points.keys()):
+                for point, label in zip(lm, current_points.keys(), strict=True):
                     logger.debug(f"Adding {label} at {point}.")
                     fiducials_to_add.append((label, point))
         case _:

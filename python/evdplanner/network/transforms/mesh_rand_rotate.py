@@ -87,7 +87,7 @@ class MeshRandRotated(mt.RandomizableTransform, mt.MapTransform):
                     landmarks[i] = landmarks[i] @ matrix
                 d[self.landmarks_key] = landmarks, names
             else:
-                msg = f"Matrix is None."
+                msg = "Matrix is None."
                 raise ValueError(msg)
 
         return d

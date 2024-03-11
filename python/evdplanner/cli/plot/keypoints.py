@@ -90,7 +90,7 @@ def keypoints(
     fig, ax = plt.subplots(1, 1, figsize=(9, 9), dpi=600)
     ax.imshow(image, cmap="viridis")
 
-    for idx, (filename, k) in enumerate(kps.items()):
+    for idx, k in enumerate(kps.values()):
         labels = k["label"]
         positions = k["position"]
         x = [p[0] * image.shape[1] for p in positions]

@@ -395,7 +395,8 @@ def optimize(
     success_percentage = 100 * (len(study.trials) - len(study.failed_trials)) / len(study.trials)
 
     logger.info(
-        f"Of which, {len(study.trials) - len(study.failed_trials)} ({success_percentage} %) succeeded."
+        f"Of which, {len(study.trials) - len(study.failed_trials)} "
+        f"({success_percentage} %) succeeded."
     )
     logger.info("Best trial:")
     best_trial = study.best_trial

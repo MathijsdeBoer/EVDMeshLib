@@ -1,3 +1,7 @@
+"""
+Augment a mesh with random rotations and deformations.
+"""
+
 from math import pi
 from pathlib import Path
 
@@ -196,10 +200,10 @@ def mesh(
             * Mat4.translation(origin.x, origin.y, origin.z)
         )
 
-        logger.debug(f"Rotating mesh vertices.")
+        logger.debug("Rotating mesh vertices.")
         m.transform(matrix)
 
-        logger.debug(f"Rotating keypoints.")
+        logger.debug("Rotating keypoints.")
         for mark in keypoints.markups:
             logger.debug(f"Rotating control points for {mark.markup_type}.")
             for point in mark.control_points:
