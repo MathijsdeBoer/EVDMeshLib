@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import click
-import numpy as np
 
 
 @click.command()
@@ -46,6 +45,7 @@ def snap_landmarks(
     -------
     None
     """
+    import numpy as np
     from loguru import logger
 
     from evdplanner.cli import set_verbosity

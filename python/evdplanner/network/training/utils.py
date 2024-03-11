@@ -9,6 +9,7 @@ import torch
 from monai.metrics import MAEMetric, MSEMetric
 from torch import Tensor, nn, optim
 
+from evdplanner.markups import MarkupManager
 from evdplanner.network.training.losses import (
     MeanAbsoluteAngularError,
     MeanSquaredAngularError,
@@ -170,7 +171,7 @@ def get_lr_scheduler(
         return lr_scheduler
 
 
-def get_data(
+def _get_maps(
     root: Path,
     anatomy: str,
     image_files: tuple[str] = ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png"),
@@ -179,29 +180,6 @@ def get_data(
     output_label_key: str = "keypoints",
     resolution: int = 1024,
 ) -> tuple[list[dict[str, Path]], list[str], list[str]]:
-    """
-    Get the data.
-
-    Parameters
-    ----------
-    root : Path
-        The root directory.
-    anatomy : str
-        The anatomy.
-    image_files : tuple[str], optional
-        The image files, by default ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png")
-    label_file : str, optional
-        The label file, by default "projected_{anatomy}.kp.json"
-    output_image_keys : tuple[str], optional
-        The output image keys, by default ("map_{anatomy}_depth", "map_{anatomy}_normal")
-    output_label_key : str, optional
-        The output label key, by default "keypoints"
-
-    Returns
-    -------
-    tuple[list[dict[str, Path]], list[str], list[str]]
-        The data, the maps, and the keypoints.
-    """
     data = []
 
     if not len(image_files) == len(output_image_keys):
@@ -240,3 +218,110 @@ def get_data(
         data.append(sample_dict)
 
     return data, maps, keypoints
+
+
+def _get_mesh(
+    root: Path,
+    anatomy: str,
+    mesh_file: str = "mesh_{anatomy}.stl",
+    landmarks_file: str = "landmarks_{anatomy}.mrk.json",
+    output_mesh_key: str = "mesh",
+    output_landmarks_key: str = "landmarks",
+) -> tuple[list[dict[str, Path]], list[str], list[str]]:
+    data = []
+
+    landmark_names = []
+    for subdir in root.iterdir():
+        if not subdir.is_dir():
+            continue
+
+        mesh = subdir / mesh_file.format(anatomy=anatomy)
+        landmarks = subdir / landmarks_file.format(anatomy=anatomy)
+
+        if len(landmark_names) == 0:
+            manager = MarkupManager.load(landmarks)
+
+            for markup in manager.markups:
+                for control_point in markup.control_points:
+                    landmark_names.append(control_point.label)
+
+        if not mesh.exists() or not landmarks.exists():
+            continue
+
+        sample_dict = {
+            output_mesh_key: mesh,
+            output_landmarks_key: landmarks,
+        }
+        data.append(sample_dict)
+
+    return data, [f"map_{anatomy}_depth", f"map_{anatomy}_normal"], landmark_names
+
+
+def get_data(
+    root: Path,
+    anatomy: str,
+    mesh_file: str = "mesh_{anatomy}.stl",
+    landmarks_file: str = "landmarks_{anatomy}.mrk.json",
+    output_mesh_key: str = "mesh",
+    output_landmarks_key: str = "landmarks",
+    use_maps: bool = False,
+    image_files: tuple[str] = ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png"),
+    label_file: str = "projected_{anatomy}.kp.json",
+    output_image_keys: tuple[str] = ("map_{anatomy}_depth", "map_{anatomy}_normal"),
+    output_keypoints_key: str = "keypoints",
+    resolution: int = 1024,
+) -> tuple[list[dict[str, Path]], list[str], list[str]]:
+    """
+    Get the data.
+
+    Parameters
+    ----------
+    root : Path
+        The root directory.
+    anatomy : str
+        The anatomy.
+    mesh_file : str, optional
+        The mesh file, by default "mesh_{anatomy}.stl"
+    landmarks_file : str, optional
+        The landmarks file, by default "landmarks_{anatomy}.mrk.json"
+    output_mesh_key : str, optional
+        The output mesh key, by default "mesh"
+    output_landmarks_key : str, optional
+        The output landmarks key, by default "landmarks"
+    use_maps : bool, optional
+        Whether to use pre-rendered maps or not, by default False
+    image_files : tuple[str], optional
+        The image files, by default ("map_{anatomy}_depth.png", "map_{anatomy}_normal.png")
+    label_file : str, optional
+        The label file, by default "projected_{anatomy}.kp.json"
+    output_image_keys : tuple[str], optional
+        The output image keys, by default ("map_{anatomy}_depth", "map_{anatomy}_normal")
+    output_keypoints_key : str, optional
+        The output label key, by default "keypoints"
+    resolution : int, optional
+        The resolution, by default 1024
+
+    Returns
+    -------
+    tuple[list[dict[str, Path]], list[str], list[str]]
+        The data, the maps, and the keypoints.
+    """
+    if use_maps:
+        return _get_maps(
+            root,
+            anatomy,
+            image_files=image_files,
+            label_file=label_file,
+            output_image_keys=output_image_keys,
+            output_label_key=output_keypoints_key,
+            resolution=resolution,
+        )
+    else:
+        return _get_mesh(
+            root,
+            anatomy,
+            mesh_file=mesh_file,
+            landmarks_file=landmarks_file,
+            output_mesh_key=output_mesh_key,
+            output_landmarks_key=output_landmarks_key,
+        )

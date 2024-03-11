@@ -91,30 +91,45 @@ def default_mesh_load_transforms(
 
     if include_augmentations:
         transforms += [
-            MeshRandRotated(keys=[mesh_key], mesh_key=mesh_key, landmarks_key=landmarks_key),
-            MeshRandDeformed(mesh_key=mesh_key, landmarks_key=landmarks_key),
+            MeshRandRotated(
+                keys=[mesh_key], mesh_key=mesh_key, landmarks_key=landmarks_key, prob=0.5
+            ),
+            MeshRandDeformed(mesh_key=mesh_key, landmarks_key=landmarks_key, prob=0.5),
         ]
 
     transforms += [
         MeshRenderd(
             keys=[mesh_key],
-            render_key=image_key,
+            output_key=image_key,
             x_resolution=x_resolution,
             y_resolution=y_resolution,
         ),
-        mt.SplitDimd(keys=image_key, output_postfixes=["_depth", "_norm_x", "_norm_y", "_norm_z"]),
-        mt.ConcatItemsd(keys=[f"{image_key}_norm_x", f"{image_key}_norm_y", f"{image_key}_norm_z"], name="normal", dim=0),
-        mt.ScaleIntensityd(keys=[f"{image_key}_depth", "normal"], minv=-1.0, maxv=1.0, channel_wise=False),
+        mt.SplitDimd(keys=image_key, output_postfixes=["depth", "norm_x", "norm_y", "norm_z"]),
+        mt.ConcatItemsd(
+            keys=[f"{image_key}_norm_x", f"{image_key}_norm_y", f"{image_key}_norm_z"],
+            name="normal",
+            dim=0,
+        ),
+        mt.ScaleIntensityd(
+            keys=[f"{image_key}_depth", "normal"], minv=-1.0, maxv=1.0, channel_wise=False
+        ),
         mt.ConcatItemsd(keys=[f"{image_key}_depth", "normal"], name=image_key, dim=0),
-        mt.DeleteItemsd(keys=[f"{image_key}_depth", f"{image_key}_norm_x", f"{image_key}_norm_y", f"{image_key}_norm_z", "normal"]),
-
+        mt.DeleteItemsd(
+            keys=[
+                f"{image_key}_depth",
+                f"{image_key}_norm_x",
+                f"{image_key}_norm_y",
+                f"{image_key}_norm_z",
+                "normal",
+            ]
+        ),
         LandmarksToKeypointsd(
             landmarks_keys=landmarks_key,
             mesh_key=mesh_key,
             keypoints_key=label_key,
         ),
-
         mt.ToTensord(keys=[image_key, label_key], allow_missing_keys=allow_missing_keys),
+        mt.DeleteItemsd(keys=[mesh_key, landmarks_key]),
     ]
 
     return transforms
@@ -155,10 +170,16 @@ def default_augment_transforms(
         mt.OneOf(
             [
                 mt.RandGaussianNoised(keys=[image_key], prob=0.5, std=0.1),
-                mt.OneOf([
-                    mt.RandAdjustContrastd(keys=[image_key], prob=0.5, gamma=(0.5, 1.5), invert_image=False),
-                    mt.RandAdjustContrastd(keys=[image_key], prob=0.5, gamma=(0.5, 1.5), invert_image=True),
-                ])
+                mt.OneOf(
+                    [
+                        mt.RandAdjustContrastd(
+                            keys=[image_key], prob=0.5, gamma=(0.5, 1.5), invert_image=False
+                        ),
+                        mt.RandAdjustContrastd(
+                            keys=[image_key], prob=0.5, gamma=(0.5, 1.5), invert_image=True
+                        ),
+                    ]
+                ),
             ]
         ),
     ]

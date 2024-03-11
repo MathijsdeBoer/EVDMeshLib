@@ -122,10 +122,8 @@ def project_mesh(
 
 @project_mesh.command(name="equirectangular")
 @click.pass_context
-@click.option("--theta-offset", type=float, default=0.5 * pi, show_default=True)
 def equirectangular(
     ctx: click.Context,
-    theta_offset: float = 0.5 * pi,
 ) -> None:
     """Project mesh to equirectangular map."""
     import json
@@ -142,7 +140,6 @@ def equirectangular(
 
     logger.debug(f"Number of triangles: {ctx.obj['mesh'].num_triangles}")
     logger.debug(f"Mesh origin: {ctx.obj['mesh'].origin}")
-    logger.debug(f"Theta offset: {theta_offset}")
     logger.debug(f"Output resolution: {ctx.obj['resolution']}x{ctx.obj['resolution'] // 2}")
 
     mesh = ctx.obj["mesh"]

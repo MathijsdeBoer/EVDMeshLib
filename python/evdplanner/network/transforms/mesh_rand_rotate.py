@@ -1,23 +1,27 @@
-import random
+from math import pi
 from pathlib import Path
-from typing import Hashable, Mapping
+from typing import Any, Hashable, Mapping
 
 import monai.transforms as mt
+import numpy as np
+from monai.transforms import Randomizable
 
 from evdplanner.geometry import Mesh
-from evdplanner.linalg import Vec3, Mat4
+from evdplanner.linalg import Mat4, Vec3
 
 
-class MeshRandRotated(mt.MapTransform):
+class MeshRandRotated(mt.RandomizableTransform, mt.MapTransform):
     def __init__(
-            self,
-            keys: list[str],
-            mesh_key: str,
-            landmarks_key: str,
-            rotation_range: float | tuple[float, float] = 1.0,
-            allow_missing_keys: bool = False
+        self,
+        keys: list[str],
+        mesh_key: str,
+        landmarks_key: str,
+        rotation_range: float | tuple[float, float] = pi,
+        allow_missing_keys: bool = False,
+        prob: float = 1.0,
     ) -> None:
-        super().__init__(keys=keys, allow_missing_keys=allow_missing_keys)
+        mt.RandomizableTransform.__init__(self, prob=prob)
+        mt.MapTransform.__init__(self, keys=keys, allow_missing_keys=allow_missing_keys)
 
         self.mesh_key = mesh_key
         self.landmarks_key = landmarks_key
@@ -27,9 +31,29 @@ class MeshRandRotated(mt.MapTransform):
         else:
             self.rotation_range = tuple(rotation_range)
 
+        self.rotation_axis = None
+        self.rotation_angle = None
+
+    def set_random_state(
+        self, seed: int | None = None, state: np.random.RandomState | None = None
+    ) -> Randomizable:
+        super().set_random_state(seed, state)
+        return self
+
+    def randomize(self, data: Any) -> None:
+        super().randomize(data)
+        self.rotation_axis = Vec3(
+            self.R.uniform(-1.0, 1.0), self.R.uniform(-1.0, 1.0), self.R.uniform(-1.0, 1.0)
+        ).unit_vector
+        self.rotation_angle = self.R.uniform(*self.rotation_range)
+
     def __call__(self, data: Mapping[Hashable, Path | Mesh]) -> dict:
         d = dict(data)
         matrix = None
+        self.randomize(None)
+
+        if not self._do_transform:
+            return d
 
         if self.mesh_key not in d.keys():
             if not self.allow_missing_keys:
@@ -41,16 +65,11 @@ class MeshRandRotated(mt.MapTransform):
                 msg = f"Expected a Mesh, but got {type(mesh)}."
                 raise ValueError(msg)
 
-            random_axis = Vec3(
-                random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0), random.uniform(-1.0, 1.0)
-            ).unit_vector
-            random_angle = random.uniform(*self.rotation_range)
-
             origin = mesh.origin
             matrix = (
-                    Mat4.translation(-origin.x, -origin.y, -origin.z)
-                    * Mat4.rotation(random_axis, random_angle)
-                    * Mat4.translation(origin.x, origin.y, origin.z)
+                Mat4.translation(-origin.x, -origin.y, -origin.z)
+                * Mat4.rotation(self.rotation_axis, self.rotation_angle)
+                * Mat4.translation(origin.x, origin.y, origin.z)
             )
 
             mesh.transform(matrix)

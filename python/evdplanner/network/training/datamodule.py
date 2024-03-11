@@ -7,7 +7,7 @@ from pathlib import Path
 import monai.transforms as mt
 from lightning.pytorch import LightningDataModule
 from loguru import logger
-from monai.data import CacheDataset
+from monai.data import CacheDataset, Dataset
 from torch.utils.data import DataLoader
 
 
@@ -84,11 +84,10 @@ class EVDPlannerDataModule(LightningDataModule):
         self,
         train_samples: list[dict],
         val_samples: list[dict],
-        maps: list[str],
-        keypoints_key: str,
         test_samples: list[dict] = None,
         load_transforms: list[mt.Transform] = None,
         augment_transforms: list[mt.Transform] = None,
+        use_maps: bool = False,
         batch_size: int = 1,
         num_workers: int = 0,
     ) -> None:
@@ -101,10 +100,6 @@ class EVDPlannerDataModule(LightningDataModule):
             List of training samples.
         val_samples : list[dict]
             List of validation samples.
-        maps : list[str]
-            List of map keys.
-        keypoints_key : str
-            Key for the keypoints.
         test_samples : list[dict], optional
             List of test samples, by default None
         load_transforms : list[mt.Transform], optional
@@ -116,10 +111,6 @@ class EVDPlannerDataModule(LightningDataModule):
         num_workers : int, optional
             Number of workers, by default 0
         """
-        validate_samples(train_samples, maps, keypoints_key)
-        if test_samples:
-            validate_samples(test_samples, maps, keypoints_key)
-
         super().__init__()
         self.train_samples = train_samples
         self.val_samples = val_samples
@@ -136,6 +127,8 @@ class EVDPlannerDataModule(LightningDataModule):
         self.val_data = None
         self.test_data = None
 
+        self._dataset_type = CacheDataset if use_maps else Dataset
+
     def setup(self, stage: str | None = None) -> None:
         """
         Setup the data module.
@@ -149,18 +142,18 @@ class EVDPlannerDataModule(LightningDataModule):
         -------
         None
         """
-        self.train_data = CacheDataset(
+        self.train_data = self._dataset_type(
             self.train_samples,
             transform=mt.Compose(self.load_transforms + self.augment_transforms),
         )
 
-        self.val_data = CacheDataset(
+        self.val_data = self._dataset_type(
             self.val_samples,
             transform=mt.Compose(self.load_transforms),
         )
 
         if self.test_samples:
-            self.test_data = CacheDataset(
+            self.test_data = self._dataset_type(
                 self.test_samples,
                 transform=mt.Compose(self.load_transforms),
             )

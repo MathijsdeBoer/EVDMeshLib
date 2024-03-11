@@ -6,7 +6,9 @@ import click
 @click.command()
 @click.argument(
     "input_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path),
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
 )
 @click.option(
     "--anatomy",
@@ -132,15 +134,21 @@ def data(
                 projection = camera.project_back(position)
                 projections[name] = projection
 
-                surface_hit = mesh.intersect(camera.cast_ray(*projection), IntersectionSort.Farthest).position
+                surface_hit = mesh.intersect(
+                    camera.cast_ray(*projection), IntersectionSort.Farthest
+                ).position
                 if surface_hit is None:
                     logger.error(f"{subdir}: Landmark {name} does not intersect the mesh.")
                 else:
-                    logger.debug(f"{subdir}: Landmark {name} intersects the mesh at {surface_hit}.")
+                    logger.debug(
+                        f"{subdir}: Landmark {name} intersects the mesh at {surface_hit}."
+                    )
                     if (surface_hit - position).length > 10.0:
                         logger.error(f"{subdir}: Landmark {name} is more than 1cm from the mesh.")
                     elif (surface_hit - position).length > 1.0:
-                        logger.warning(f"{subdir}: Landmark {name} is more than 1mm from the mesh.")
+                        logger.warning(
+                            f"{subdir}: Landmark {name} is more than 1mm from the mesh."
+                        )
 
             logger.debug(f"{subdir}: Landmark projections: {projections}")
 
@@ -166,9 +174,13 @@ def data(
                 logger.warning(f"{subdir}: Medial Canthus Right is above Nasion.")
 
             if medial_canthus_left[0] < lateral_canthus_left[0]:
-                logger.error(f"{subdir}: Medial Canthus Left is to the left of Lateral Canthus Left.")
+                logger.error(
+                    f"{subdir}: Medial Canthus Left is to the left of Lateral Canthus Left."
+                )
             if medial_canthus_right[0] > lateral_canthus_right[0]:
-                logger.error(f"{subdir}: Medial Canthus Right is to the right of Lateral Canthus Right.")
+                logger.error(
+                    f"{subdir}: Medial Canthus Right is to the right of Lateral Canthus Right."
+                )
 
             left_pre_auricle = projections["Pre-Auricle Left"]
             right_pre_auricle = projections["Pre-Auricle Right"]
@@ -180,11 +192,15 @@ def data(
             if left_pre_auricle[0] > right_pre_auricle[0]:
                 logger.error(f"{subdir}: Pre-Auricle Left is to the right of Pre-Auricle Right.")
 
-            left_canthus_distance = (lateral_canthus_left[0] - medial_canthus_left[0]) ** 2 + (lateral_canthus_left[1] - medial_canthus_left[1]) ** 2
-            left_canthus_distance = left_canthus_distance ** 0.5
+            left_canthus_distance = (lateral_canthus_left[0] - medial_canthus_left[0]) ** 2 + (
+                lateral_canthus_left[1] - medial_canthus_left[1]
+            ) ** 2
+            left_canthus_distance = left_canthus_distance**0.5
 
-            right_canthus_distance = (lateral_canthus_right[0] - medial_canthus_right[0]) ** 2 + (lateral_canthus_right[1] - medial_canthus_right[1]) ** 2
-            right_canthus_distance = right_canthus_distance ** 0.5
+            right_canthus_distance = (lateral_canthus_right[0] - medial_canthus_right[0]) ** 2 + (
+                lateral_canthus_right[1] - medial_canthus_right[1]
+            ) ** 2
+            right_canthus_distance = right_canthus_distance**0.5
 
             if abs(1 - left_canthus_distance / right_canthus_distance) > 0.1:
                 logger.warning(f"{subdir}: Canthus distances are not within 10% of each other.")

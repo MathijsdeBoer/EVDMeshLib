@@ -1,4 +1,3 @@
-use indicatif::{ProgressBar, ProgressStyle};
 use itertools::iproduct;
 use ndarray::{Array3, Ix3};
 use numpy::{IntoPyArray, PyArray};
@@ -37,26 +36,15 @@ impl Renderer {
         let image_pixels: Vec<(usize, usize)> =
             iproduct!(0..self.camera.y_resolution, 0..self.camera.x_resolution).collect();
 
-        let bar = ProgressBar::new(image_pixels.len() as u64);
-        bar.set_style(
-            ProgressStyle::with_template(
-                "[{elapsed_precise} / {eta_precise}] {spinner} {wide_bar} {msg} {pos:>7}/{len:7}",
-            )
-            .unwrap(),
-        );
-        bar.set_message("Intersecting Rays");
-        bar.set_position(0);
         let values: Vec<((usize, usize), Option<Intersection>)> = image_pixels
             .par_iter()
             .map(|(y, x)| {
-                bar.inc(1);
                 (
                     (*y, *x),
                     self.mesh.intersect(&self.camera.cast_ray(*x as f64, *y as f64), intersection_mode, epsilon),
                 )
             })
             .collect();
-        bar.finish();
 
         for ((y, x), intersection) in values {
             if let Some(intersection) = intersection {

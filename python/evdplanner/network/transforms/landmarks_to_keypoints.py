@@ -1,13 +1,20 @@
 from pathlib import Path
 
 import monai.transforms as mt
+import numpy as np
 
 from evdplanner.linalg import Vec3
-from evdplanner.rs import CameraType, Camera, Mesh
+from evdplanner.rs import Camera, CameraType, Mesh
 
 
 class LandmarksToKeypointsd(mt.MapTransform):
-    def __init__(self, landmarks_keys: str, mesh_key: str, keypoints_key: str,  allow_missing_keys: bool = False) -> None:
+    def __init__(
+        self,
+        landmarks_keys: str,
+        mesh_key: str,
+        keypoints_key: str,
+        allow_missing_keys: bool = False,
+    ) -> None:
         super().__init__(keys=[mesh_key, landmarks_keys], allow_missing_keys=allow_missing_keys)
 
         self.landmarks_keys = landmarks_keys
@@ -33,6 +40,6 @@ class LandmarksToKeypointsd(mt.MapTransform):
         for i, landmark in enumerate(landmarks):
             keypoints.append(camera.project_back(landmark))
 
-        d[self.keypoints_key] = keypoints
+        d[self.keypoints_key] = np.array(keypoints)
 
         return d
