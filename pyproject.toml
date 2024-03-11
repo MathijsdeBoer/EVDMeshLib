@@ -27,10 +27,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "maturin >= 1.0, < 2.0",
-    "ruff",
     "black",
-    "isort"
+    "isort",
+    "maturin >= 1.0, < 2.0",
+    "pytest",
+    "ruff"
 ]
 
 [project.scripts]
