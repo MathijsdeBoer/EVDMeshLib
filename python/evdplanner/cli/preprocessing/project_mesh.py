@@ -33,13 +33,6 @@ import click
     help="Resolution of the output image.",
 )
 @click.option(
-    "--gpu",
-    is_flag=True,
-    default=False,
-    show_default=True,
-    help="Use GPU rendering.",
-)
-@click.option(
     "-v",
     "--verbose",
     count=True,
@@ -67,7 +60,6 @@ def project_mesh(
     mesh: Path,
     output: Path,
     resolution: int,
-    gpu: bool,
     verbose: int,
     keypoints_file: Path = None,
     strict: bool = False,
@@ -85,8 +77,6 @@ def project_mesh(
         The path to the output directory.
     resolution : int
         The resolution of the output image.
-    gpu : bool
-        Whether to use GPU rendering or not.
     verbose : int
         The verbosity level.
     keypoints_file : Path, optional
@@ -115,7 +105,6 @@ def project_mesh(
     ctx.obj["mesh"] = Mesh.load(str(mesh), 10_000_000)
     ctx.obj["output"] = output
     ctx.obj["resolution"] = resolution
-    ctx.obj["gpu"] = gpu
     ctx.obj["keypoints_file"] = keypoints_file
     ctx.obj["strict"] = strict
 
@@ -135,7 +124,7 @@ def equirectangular(
 
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager, MarkupTypes
-    from evdplanner.rendering import Camera, CameraType, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
     logger.debug(f"Number of triangles: {ctx.obj['mesh'].num_triangles}")
@@ -156,22 +145,10 @@ def equirectangular(
         camera_type=CameraType.Equirectangular,
     )
 
-    if ctx.obj["gpu"]:
-        from evdplanner.rendering.gpu import GPURenderer
-
-        logger.info("Using GPU renderer")
-        renderer = GPURenderer(
-            camera,
-            mesh=mesh,
-        )
-    else:
-        from evdplanner.rendering.cpu import CPURenderer
-
-        logger.info("Using CPU renderer")
-        renderer = CPURenderer(
-            camera,
-            mesh=mesh,
-        )
+    renderer = CPURenderer(
+        camera,
+        mesh=mesh,
+    )
 
     logger.info("Rendering...")
     start = time()
@@ -298,18 +275,12 @@ def orthographic(
 ) -> None:
     import numpy as np
     from imageio.v3 import imwrite
+    from loguru import logger
 
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager
-    from evdplanner.rendering import Camera, CameraType, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
-
-    if ctx.obj["gpu"]:
-        from evdplanner.rendering.gpu import GPURenderer as Renderer
-    else:
-        from evdplanner.rendering.cpu import CPURenderer as Renderer
-
-    from loguru import logger
 
     logger.info(f"Loading Kocher projection from {kocher}")
     markups = MarkupManager.load(kocher)
@@ -352,7 +323,7 @@ def orthographic(
             camera_type=CameraType.Orthographic,
             size=125,
         )
-        renderer = Renderer(
+        renderer = CPURenderer(
             camera,
             mesh=mesh,
         )

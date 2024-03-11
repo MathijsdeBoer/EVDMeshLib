@@ -1,12 +1,13 @@
 from math import log2
+
 import pytest
 from torch import rand
 
 from evdplanner.network.architecture.point_regressor import PointRegressor
 
 
-@pytest.mark.parametrize("resolution", [256 * 2 ** i for i in range(4)])
-@pytest.mark.parametrize("initial_filters", [8 * 2 ** i for i in range(4)])
+@pytest.mark.parametrize("resolution", [256 * 2**i for i in range(4)])
+@pytest.mark.parametrize("initial_filters", [8 * 2**i for i in range(4)])
 @pytest.mark.parametrize("num_res_units", list(range(5)))
 def test_skin_point_regressor(
     resolution: int,
@@ -21,7 +22,7 @@ def test_skin_point_regressor(
 
     depth = int(log2(resolution // 16))
 
-    channels = [initial_filters * 2 ** i for i in range(depth)]
+    channels = [initial_filters * 2**i for i in range(depth)]
 
     model = PointRegressor(
         maps=maps,

@@ -72,12 +72,6 @@ import click
     help="Whether to use GPU model or not.",
 )
 @click.option(
-    "--gpu-render",
-    is_flag=True,
-    default=False,
-    help="Whether to use GPU rendering or not.",
-)
-@click.option(
     "-v",
     "--verbose",
     count=True,
@@ -96,7 +90,6 @@ def plan(
     ventricles: Path | None = None,
     ventricles_model: Path | None = None,
     gpu_model: bool = False,
-    gpu_render: bool = False,
     verbose: int = 0,
     write_intermediate: bool = False,
 ) -> None:
@@ -138,13 +131,8 @@ def plan(
     from evdplanner.markups import DisplaySettings, MarkupManager
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.transforms import default_load_transforms
-    from evdplanner.rendering import Camera, CameraType, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
-
-    if gpu_render:
-        from evdplanner.rendering.gpu import GPURenderer as Renderer
-    else:
-        from evdplanner.rendering.cpu import CPURenderer as Renderer
 
     # Set the verbosity level
     set_verbosity(verbose)
@@ -178,7 +166,7 @@ def plan(
     logger.debug(f"Camera: {camera}")
 
     logger.info("Rendering skin...")
-    renderer = Renderer(camera, skin)
+    renderer = CPURenderer(camera, skin)
     skin_render = renderer.render(IntersectionSort.Farthest)
     logger.debug(f"Skin render shape: {skin_render.shape}")
 

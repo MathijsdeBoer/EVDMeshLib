@@ -207,7 +207,9 @@ def _get_maps(
         for image in images:
             im = imread(image)
             if im.shape[1] != resolution:
-                logger.warning(f"Image {image} has a different x resolution ({im.shape[1]}, {im.shape[0]}) than {resolution}.")
+                logger.warning(
+                    f"Image {image} has a different x resolution ({im.shape[1]}, {im.shape[0]}) than {resolution}."
+                )
 
         if not maps:
             maps = [file.stem for file in images]
