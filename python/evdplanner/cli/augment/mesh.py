@@ -72,6 +72,7 @@ def _generate_noise(
     type=click.Path(dir_okay=False, resolve_path=True, path_type=Path),
 )
 @click.option(
+    "-k",
     "--keypoints",
     "keypoints_path",
     type=click.Path(exists=True, dir_okay=False, resolve_path=True, path_type=Path),
@@ -100,7 +101,7 @@ def _generate_noise(
 @click.option(
     "--deform-frequency",
     type=float,
-    default=0.001,
+    default=0.0025,
     required=False,
     help="Frequency of the noise.",
 )
@@ -161,48 +162,13 @@ def mesh(
     set_verbosity(verbosity)
 
     if not seed:
-        seed = random.randint(0, 1_000_000_000)
+        seed = random.randint(0, 2**31)
         logger.debug(f"Seed not provided. Using random seed {seed}.")
     random.seed(seed)
 
     if not rotate and not deform:
         logger.warning("No augmentation selected. Exiting.")
         return
-
-    if not rotate and rotate_range:
-        logger.warning("--rotate-range set, but --rotate omitted. Ignoring --rotate-range.")
-        rotate_range = None
-    elif rotate and not rotate_range:
-        logger.warning("--rotate set, but --rotate-range omitted. Setting --rotate-range to 1.0.")
-        rotate_range = 1.0
-
-    if not deform:
-        if deform_scale:
-            logger.warning("--deform-scale set, but --deform omitted. Ignoring --deform-scale.")
-            deform_scale = 1.0
-        if deform_amplitude:
-            logger.warning("--deform-range set, but --deform omitted. Ignoring --deform-range.")
-            deform_amplitude = None
-        if deform_frequency:
-            logger.warning(
-                "--deform-frequency set, but --deform omitted. Ignoring --deform-frequency."
-            )
-            deform_frequency = 0.5
-        if deform_octaves:
-            logger.warning(
-                "--deform-octaves set, but --deform omitted. Ignoring --deform-octaves."
-            )
-            deform_octaves = 3
-        if deform_persistence:
-            logger.warning(
-                "--deform-persistence set, but --deform omitted. Ignoring --deform-persistence."
-            )
-            deform_persistence = 0.5
-        if deform_lacunarity:
-            logger.warning(
-                "--deform-lacunarity set, but --deform omitted. Ignoring --deform-lacunarity."
-            )
-            deform_lacunarity = 2.0
 
     logger.info(f"Loading mesh from {input_mesh}.")
     m = Mesh.load(str(input_mesh))
