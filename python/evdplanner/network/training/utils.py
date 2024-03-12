@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import torch
-from imageio.v3 import imread
+from imageio.v3 import improps
 from loguru import logger
 from monai.metrics import MAEMetric, MSEMetric
 from torch import Tensor, nn, optim
@@ -17,6 +17,7 @@ from evdplanner.network.training.losses import (
     MeanSquaredAngularError,
 )
 from evdplanner.network.training.lr_schedulers import PolyLRScheduler
+from tqdm import tqdm
 
 
 def get_loss_fn(
@@ -191,7 +192,9 @@ def _get_maps(
     maps = None
     keypoints = None
 
-    for subdir in root.iterdir():
+    subdirs = [subdir for subdir in root.iterdir() if subdir.is_dir()]
+
+    for subdir in tqdm(subdirs, desc="Searching subdirectories", leave=False):
         if not subdir.is_dir():
             continue
 
@@ -205,7 +208,7 @@ def _get_maps(
             continue
 
         for image in images:
-            im = imread(image)
+            im = improps(image)
             if im.shape[1] != resolution:
                 logger.warning(
                     f"Image {image} has a different x resolution ({im.shape[1]}, {im.shape[0]}) than {resolution}."
