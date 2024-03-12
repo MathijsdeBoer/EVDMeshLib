@@ -137,7 +137,7 @@ class LightningWrapper(pl.LightningModule):
         LightningWrapper
             The built LightningWrapper.
         """
-        config = model.get_optuna_parameters(trial)
+        config = model.get_optuna_parameters(trial, **kwargs)
         loggable_params = model.loggable_parameters()
         model = model.from_optuna_parameters(config, **kwargs)
         loss = get_loss_fn(config["loss_fn"])

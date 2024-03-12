@@ -332,6 +332,8 @@ def optimize(
             in_shape=(4, x_resolution, y_resolution),
             out_shape=(len(label_names), 2),
             final_bias=final_bias,
+            resolution=resolution,
+            anatomy=anatomy,
         )
         logger.debug(f"Setting input shape to (1, 4, {x_resolution}, {y_resolution}).")
         model.set_input_shape((1, 4, x_resolution, y_resolution))

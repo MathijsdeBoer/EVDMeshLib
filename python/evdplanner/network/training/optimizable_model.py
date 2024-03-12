@@ -2,6 +2,7 @@
 The abstract class for the models that can be optimized using optuna.
 """
 from abc import ABC, abstractmethod
+from typing import Any
 
 import optuna
 from torch import nn
@@ -25,8 +26,8 @@ class OptimizableModel(ABC, nn.Module):
     @classmethod
     @abstractmethod
     def get_optuna_parameters(
-        cls: type["OptimizableModel"], optuna_trial: optuna.Trial
-    ) -> dict[str, any]:
+        cls: type["OptimizableModel"], optuna_trial: optuna.Trial, **kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Get the parameters for the model from the optuna trial.
 

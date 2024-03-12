@@ -1,7 +1,7 @@
 """
 Point regressor model.
 """
-from math import prod
+from math import ceil, log2, prod
 from typing import Any, Callable, Sequence
 
 import optuna
@@ -241,7 +241,7 @@ class PointRegressor(Regressor, OptimizableModel):
 
     @classmethod
     def get_optuna_parameters(
-        cls: type["PointRegressor"], optuna_trial: optuna.Trial
+        cls: type["PointRegressor"], optuna_trial: optuna.Trial, **kwargs: dict[str, Any]
     ) -> dict[str, Any]:
         """
         Get the parameters for the model from an Optuna trial.
@@ -256,6 +256,10 @@ class PointRegressor(Regressor, OptimizableModel):
         dict[str, Any]
             The parameters for the model.
         """
+        match kwargs["anatomy"]:
+            case "skin":
+                max_depth = int(ceil(log2(kwargs["resolution"]) / 2))
+
         params: dict[str, Any] = {
             "optimizer": optuna_trial.suggest_categorical("optimizer", ["adam", "sgd"]),
             "optimizer_args": {
@@ -266,7 +270,7 @@ class PointRegressor(Regressor, OptimizableModel):
             "max_filters": optuna_trial.suggest_categorical(
                 "max_filters", [2**i for i in range(6, 9)]
             ),
-            "num_blocks": optuna_trial.suggest_int("num_blocks", 1, 8),
+            "num_blocks": optuna_trial.suggest_int("num_blocks", 1, max_depth),
             "num_residual_units": optuna_trial.suggest_int("num_residual_units", 0, 4),
             "act_fn": optuna_trial.suggest_categorical(
                 "act_fn",
