@@ -230,6 +230,8 @@ def train(
     if not model_path.parent.exists():
         model_path.parent.mkdir(parents=True)
 
+    session_name = model_path.stem
+
     with config.open("r") as file:
         logger.info(f"Loading configuration from {config}.")
         config = json.load(file)
@@ -252,13 +254,6 @@ def train(
     logger.debug(f"Using maps: {maps}")
     logger.debug(f"Using keypoints: {label_names}")
 
-    if augment_root:
-        logger.info(f"Collecting data from {augment_root}.")
-        augment_samples, _, _ = get_data(
-            augment_root, anatomy, use_maps=use_maps, resolution=resolution
-        )
-        train_samples += augment_samples
-
     if val_root:
         logger.info(f"Collecting data from {val_root}.")
         val_samples, _, _ = get_data(val_root, anatomy, use_maps=use_maps, resolution=resolution)
@@ -266,6 +261,13 @@ def train(
         logger.warning("No validation data provided. Using 20% of training data for validation.")
         val_samples = sample(train_samples, int(0.2 * len(train_samples)))
         train_samples = [s for s in train_samples if s not in val_samples]
+
+    if augment_root:
+        logger.info(f"Collecting data from {augment_root}.")
+        augment_samples, _, _ = get_data(
+            augment_root, anatomy, use_maps=use_maps, resolution=resolution
+        )
+        train_samples += augment_samples
 
     if test_root:
         logger.info(f"Collecting data from {test_root}.")
@@ -395,6 +397,7 @@ def train(
         anatomy,
         mode="train",
         additional_callbacks=callbacks,
+        session_name=session_name,
     )
 
     logger.info(f"Saving model to {model_path}.")
