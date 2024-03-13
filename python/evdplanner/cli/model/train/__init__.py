@@ -267,7 +267,34 @@ def train(
         augment_samples, _, _ = get_data(
             augment_root, anatomy, use_maps=use_maps, resolution=resolution
         )
-        train_samples += augment_samples
+        
+        # Filter augmented samples to only include those in the training set
+        # I.e. remove any samples that are in the validation set
+        logger.debug(f"Filtering augmented samples to only include those in the training set.")
+        filtered_samples = []
+        for s in augment_samples:
+            if use_maps:
+                tmp = s[f"map_{anatomy}_depth"]
+            else:
+                tmp = s["mesh"]
+            
+            aug_parent = tmp.parent.name
+
+            if use_maps:
+                train_parents = [t[f"map_{anatomy}_depth"].parent.name for t in train_samples]
+            else:
+                train_parents = [t["mesh"].parent.name for t in train_samples]
+
+            # Augmented samples may not have an exact name match
+            # So we check if the parent directory is in the training set
+            for p in train_parents:
+                if p in aug_parent:
+                    logger.debug(f"Found match for {aug_parent} in {p}.")
+                    filtered_samples.append(s)
+                    break
+        
+        logger.debug(f"Found {len(filtered_samples)} augmented samples.")
+        train_samples.extend(filtered_samples)
 
     if test_root:
         logger.info(f"Collecting data from {test_root}.")
