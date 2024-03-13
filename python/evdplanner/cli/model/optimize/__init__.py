@@ -215,6 +215,8 @@ def optimize(
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
+    session_name = arrow.now().format("YYYY-MM-DD")
+
     def _objective(trial: optuna.Trial, final_bias: Path | None) -> float:
         """
         Objective function for optuna optimization.
@@ -363,7 +365,7 @@ def optimize(
                         trial, monitor=f"hp/{metrics[0].__class__.__name__}"
                     ),
                 ],
-                session_name=arrow.now().format("YYYY-MM-DD"),
+                session_name=session_name,
             )
         except Exception:
             logger.exception("Training failed.")
