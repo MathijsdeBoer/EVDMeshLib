@@ -37,7 +37,7 @@ import click
     "-n",
     "--n-trials",
     type=int,
-    required=True,
+    required=False,
     help="Number of trials to run.",
 )
 @click.option(
@@ -46,6 +46,14 @@ import click
     type=int,
     default=100,
     help="Number of epochs to train.",
+)
+@click.option(
+    "-t",
+    "--time",
+    "time_limit",
+    type=int,
+    required=False,
+    help="Time limit for each trial in seconds.",
 )
 @click.option(
     "--val",
@@ -115,8 +123,9 @@ def optimize(
     anatomy: str,
     train_root: Path,
     log_dir: Path,
-    n_trials: int,
     epochs: int = 100,
+    n_trials: int | None = None,
+    time_limit: int | None = None,
     val_root: Path | None = None,
     test_root: Path | None = None,
     initial_config: Path | None = None,
@@ -144,6 +153,8 @@ def optimize(
         Number of trials to run.
     epochs : int
         Number of epochs to train.
+    time_limit : int, optional
+        Time limit for each trial in seconds.
     test_root : Path, optional
         Root directory containing test data.
     initial_config : Path, optional
@@ -390,6 +401,7 @@ def optimize(
         n_trials=n_trials,
         catch=[torch.cuda.OutOfMemoryError, RuntimeError],
         gc_after_trial=True,
+        timeout=time_limit,
     )
 
     logger.info(f"Number of finished trials: {len(study.trials)}")
