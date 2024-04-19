@@ -12,7 +12,7 @@ from evdplanner.rendering import Camera, CameraType, IntersectionSort, Ray
 def _objective_fn(
     distance: float,
     thickness: float,
-    distance_weight: float = 0.66,
+    distance_weight: float = 0.5,
     thickness_threshold: float = 10.0,
 ) -> float:
     return distance * distance_weight - (
@@ -45,10 +45,11 @@ def _measure(
     mesh: Mesh,
     kp: Vec3,
     n_steps: int = 128,
-    n_iter: int = 4,
+    n_iter: int = 3,
     check_radially: bool = True,
     radius: float = 2.0,
     radial_samples: int = 8,
+    radial_rings: int = 2,
 ) -> Vec3:
     camera = Camera(
         origin=kp,
@@ -81,18 +82,20 @@ def _measure(
                         radial_distance = 0.0
                         radial_thickness = 0.0
 
-                        for radial in range(radial_samples):
-                            angle = radial / radial_samples * 2 * np.pi
-                            matrix = Mat4.rotation(ray.direction, angle)
+                        for ring in range(radial_rings):
+                            for radial in range(radial_samples):
+                                ring_radius = radius * (ring + 1) / radial_rings
+                                angle = radial / radial_samples * 2 * np.pi
+                                matrix = Mat4.rotation(ray.direction, angle)
 
-                            perpendicular = ray.direction.cross(Vec3(0.0, 0.0, 1.0)).unit_vector
-                            perpendicular = perpendicular @ matrix
-                            radial_origin = ray.origin + perpendicular * radius
+                                perpendicular = ray.direction.cross(Vec3(0.0, 0.0, 1.0)).unit_vector
+                                perpendicular = perpendicular @ matrix
+                                radial_origin = ray.origin + perpendicular * ring_radius
 
-                            radial_ray = Ray(radial_origin, ray.direction)
-                            _, rd, rt, _ = _ray_sample(mesh, radial_ray)
-                            radial_distance += rd
-                            radial_thickness += rt
+                                radial_ray = Ray(radial_origin, ray.direction)
+                                _, rd, rt, _ = _ray_sample(mesh, radial_ray)
+                                radial_distance += rd
+                                radial_thickness += rt
 
                         objective += _objective_fn(radial_distance, radial_thickness)
                     if objective < min_loss:
@@ -104,7 +107,7 @@ def _measure(
         logger.debug(f"Best loss: {min_loss}.")
         logger.debug(f"Best point: {best_point}.")
 
-        spread /= 8
+        spread /= 4
 
     return best_point
 
@@ -204,5 +207,5 @@ def target(
     left_closest = find_closest_intersection(mesh, left_tp)
     right_closest = find_closest_intersection(mesh, right_tp)
 
-    logger.info(f"Left target closest wall distance: {left_closest}.")
-    logger.info(f"Right target closest wall distance: {right_closest}.")
+    logger.info(f"Left target closest wall distance: {(left_closest - left_tp).length} mm.")
+    logger.info(f"Right target closest wall distance: {(right_closest - right_tp).length} mm.")
