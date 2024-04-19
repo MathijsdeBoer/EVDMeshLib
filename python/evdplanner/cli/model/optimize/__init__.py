@@ -367,9 +367,9 @@ def optimize(
                 ],
                 session_name=session_name,
             )
-        except Exception:
+        except Exception as err:
             logger.exception("Training failed.")
-            raise optuna.TrialPruned()
+            raise optuna.TrialPruned() from err
 
         model.config["batch_size"] = batch_size
         trial.set_user_attr("model_config", model.config)

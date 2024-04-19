@@ -2,8 +2,8 @@
 A MONAI transform for loading keypoints from a JSON file.
 """
 import json
+from collections.abc import Hashable, Mapping
 from pathlib import Path
-from typing import Hashable, Mapping
 
 import monai.transforms as mt
 import torch

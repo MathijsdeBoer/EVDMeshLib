@@ -55,8 +55,7 @@ profile = "black"
 src_paths = ["python"]
 
 [tool.ruff]
-select = ["E", "F", "B", "I", "N", "D", "S", "W", "C4", "EM", "PL", "PTH", "ANN"]
-ignore = ["D105", "D200", "D203", "D212", "D401", "ANN101"]
+lint.select = ["F", "E", "W", "N", "UP", "B"]
 target-version = "py311"
 exclude = [
     "tests",
@@ -64,15 +63,15 @@ exclude = [
 line-length = 99
 src = ["python"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.ruff.pylint]
+[tool.ruff.lint.pylint]
 max-args = 10
 max-returns = 5
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"

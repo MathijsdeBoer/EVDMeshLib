@@ -1,6 +1,7 @@
 import random
+from collections.abc import Hashable, Mapping
 from pathlib import Path
-from typing import Any, Hashable, Mapping
+from typing import Any
 
 import monai.transforms as mt
 

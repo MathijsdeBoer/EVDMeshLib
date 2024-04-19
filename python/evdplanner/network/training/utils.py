@@ -2,14 +2,16 @@
 Utility functions for the network.
 """
 import json
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import torch
 from imageio.v3 import improps
 from loguru import logger
 from monai.metrics import MAEMetric, MSEMetric
 from torch import Tensor, nn, optim
+from tqdm import tqdm
 
 from evdplanner.markups import MarkupManager
 from evdplanner.network.training.losses import (
@@ -17,7 +19,6 @@ from evdplanner.network.training.losses import (
     MeanSquaredAngularError,
 )
 from evdplanner.network.training.lr_schedulers import PolyLRScheduler
-from tqdm import tqdm
 
 
 def get_loss_fn(

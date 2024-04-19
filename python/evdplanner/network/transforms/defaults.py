@@ -6,6 +6,7 @@ import monai.transforms as mt
 import torch
 
 from .json_keypoint_loader import JsonKeypointLoaderd
+from .keypoint_flip import KeypointFlipd
 from .landmarks_loader import LandmarksLoaderd
 from .landmarks_to_keypoints import LandmarksToKeypointsd
 from .mesh_loader import MeshLoaderd
@@ -167,19 +168,26 @@ def default_augment_transforms(
             ]
         ),
         mt.RandBiasFieldd(keys=[image_key], prob=0.5, coeff_range=(0.0, 0.1)),
-        mt.OneOf(
-            [
-                mt.RandGaussianNoised(keys=[image_key], prob=0.5, std=0.1),
+        mt.SomeOf(
+            transforms=[
+                mt.RandGaussianNoised(keys=[image_key], prob=1.0, std=0.1),
                 mt.OneOf(
                     [
-                        mt.RandAdjustContrastd(
-                            keys=[image_key], prob=0.5, gamma=(0.5, 1.5), invert_image=False
+                        mt.AdjustContrastd(
+                            keys=[image_key], gamma=(0.75, 1.25), invert_image=False
                         ),
-                        mt.RandAdjustContrastd(
-                            keys=[image_key], prob=0.5, gamma=(0.5, 1.5), invert_image=True
+                        mt.AdjustContrastd(
+                            keys=[image_key], gamma=(0.75, 1.25), invert_image=True
                         ),
                     ]
                 ),
-            ]
+                mt.Compose(
+                    [
+                        mt.Flipd(keys=[image_key], spatial_axis=0),
+                        KeypointFlipd(keys=[label_key], pairs=[(1, 2), (3, 4), (5, 6)]),
+                    ]
+                ),
+            ],
+            num_transforms=(0, 3),
         ),
     ]

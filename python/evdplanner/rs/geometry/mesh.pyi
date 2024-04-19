@@ -62,7 +62,7 @@ class Mesh:
             List of triangles, each represented by a tuple of three vertex indices.
         """
     @staticmethod
-    def load(path: str, num_samples: int = 10_000) -> "Mesh":
+    def load(path: str, num_samples: int = 10_000) -> Mesh:
         """
         Load a mesh from a file.
 

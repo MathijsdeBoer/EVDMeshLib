@@ -44,6 +44,8 @@ def keypoints(
         List of paths to the keypoint files.
     output : Path
         Path to the output file.
+    label : bool
+        Whether to label keypoints or not.
     verbose : int
         Verbosity level.
 
@@ -52,6 +54,7 @@ def keypoints(
     None
     """
     import matplotlib.pyplot as plt
+    import numpy as np
     import seaborn as sns
     from imageio.v3 import imread
     from loguru import logger
@@ -84,11 +87,12 @@ def keypoints(
     logger.info(f"Reading image from {image}")
     image = imread(image)
     logger.debug(f"Image shape: {image.shape}")
-    offset = 0.0125
+    relative_offset = 0.0125
 
     logger.info("Plotting keypoints on image")
-    fig, ax = plt.subplots(1, 1, figsize=(9, 9), dpi=600)
-    ax.imshow(image, cmap="viridis")
+    fig, axs = plt.subplots(2, 1, figsize=(9, 9), dpi=600)
+    axs[0].imshow(image, cmap="gray")
+    axs[0].axis("off")
 
     for idx, k in enumerate(kps.values()):
         labels = k["label"]
@@ -96,26 +100,59 @@ def keypoints(
         x = [p[0] * image.shape[1] for p in positions]
         y = [p[1] * image.shape[0] for p in positions]
 
-        ax.scatter(x, y, s=10, color=colormap[idx], marker="+")
+        axs[0].scatter(x, y, s=10, color=colormap[idx], marker="+")
 
         if label:
             logger.debug("Adding labels to keypoints")
-            offset = min(offset * image.shape[0], offset * image.shape[1])
-            for i, label in enumerate(labels):
-                logger.debug(f"Adding label {label} to keypoint {i}")
-                ax.text(
+            offset = min(relative_offset * image.shape[0], relative_offset * image.shape[1])
+            for i, l in enumerate(labels):
+                logger.debug(f"Adding label {l} to keypoint {i}")
+                axs[0].text(
                     x[i],
                     y[i] - offset,
-                    label,
+                    l,
                     fontsize=8,
                     color=colormap[idx],
                     rotation=(60 + idx * 15),
                 )
 
-    ax.legend(kps.keys(), loc="upper right", fontsize=8)
+    axs[0].legend(kps.keys(), loc="upper right", fontsize=8)
+
+    axs[1].imshow(np.flip(image, axis=-1), cmap="gray")
+    axs[1].axis("off")
+
+    for idx, k in enumerate(kps.values()):
+        labels = k["label"]
+        positions = k["position"]
+        x = [(1.0 - p[0]) * image.shape[1] for p in positions]
+        y = [p[1] * image.shape[0] for p in positions]
+
+        pairs = ((1, 2), (3, 4), (5, 6))
+        for pair in pairs:
+            x[pair[0]], x[pair[1]] = x[pair[1]], x[pair[0]]
+            y[pair[0]], y[pair[1]] = y[pair[1]], y[pair[0]]
+
+        axs[1].scatter(x, y, s=10, color=colormap[idx], marker="+")
+
+        if label:
+            logger.debug("Adding labels to keypoints")
+            offset = min(relative_offset * image.shape[0], relative_offset * image.shape[1])
+            for i, l in enumerate(labels):
+                logger.debug(f"Adding label {l} to keypoint {i}")
+                axs[1].text(
+                    x[i],
+                    y[i] - offset,
+                    l,
+                    fontsize=8,
+                    color=colormap[idx],
+                    rotation=(60 + idx * 15),
+                )
+
+    axs[1].legend(kps.keys(), loc="upper right", fontsize=8)
 
     if not output.parent.exists():
         output.parent.mkdir(parents=True)
 
     logger.info(f"Saving plot to {output}")
+    plt.tight_layout()
     fig.savefig(output)

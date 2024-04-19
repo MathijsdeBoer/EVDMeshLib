@@ -8,8 +8,8 @@ class IntersectionSort:
     A class to select the nearest or farthest intersection from a list of intersections.
     """
 
-    Nearest: "IntersectionSort"
-    Farthest: "IntersectionSort"
+    Nearest: IntersectionSort
+    Farthest: IntersectionSort
 
 class Intersection:
     """

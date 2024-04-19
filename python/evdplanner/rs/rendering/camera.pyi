@@ -1,7 +1,6 @@
 """
 The Camera class, which is used to represent a camera in a 3D scene.
 """
-from typing import Optional
 
 from evdplanner.rs import Ray
 from evdplanner.rs.linalg.vec3 import Vec3
@@ -17,9 +16,9 @@ class CameraType:
     Equirectangular: "CameraType"
     """
 
-    Perspective: "CameraType"
-    Orthographic: "CameraType"
-    Equirectangular: "CameraType"
+    Perspective: CameraType
+    Orthographic: CameraType
+    Equirectangular: CameraType
 
 class Camera:
     """
@@ -56,9 +55,9 @@ class Camera:
     x_resolution: int
     y_resolution: int
     camera_type: CameraType
-    fov: Optional[float]
-    aspect_ratio: Optional[float]
-    size: Optional[float]
+    fov: float | None
+    aspect_ratio: float | None
+    size: float | None
 
     def __init__(
         self,
@@ -68,9 +67,9 @@ class Camera:
         x_resolution: int,
         y_resolution: int,
         camera_type: CameraType,
-        fov: Optional[float] = None,
-        aspect_ratio: Optional[float] = None,
-        size: Optional[float] = None,
+        fov: float | None = None,
+        aspect_ratio: float | None = None,
+        size: float | None = None,
     ) -> None:
         """
         Initialize the Camera object.
@@ -102,9 +101,9 @@ class Camera:
 
         Parameters
         ----------
-        x : int
+        x : float
             The x-coordinate of the pixel.
-        y : int
+        y : float
             The y-coordinate of the pixel.
 
         Returns

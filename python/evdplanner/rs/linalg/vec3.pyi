@@ -35,7 +35,7 @@ class Vec3:
             The z component
         """
     @staticmethod
-    def zero() -> "Vec3":
+    def zero() -> Vec3:
         """
         Returns a new Vec3 instance with all components set to zero.
 
@@ -45,7 +45,7 @@ class Vec3:
             A new Vec3 instance with all components set to zero
         """
     @staticmethod
-    def one() -> "Vec3":
+    def one() -> Vec3:
         """
         Returns a new Vec3 instance with all components set to one.
 
@@ -55,7 +55,7 @@ class Vec3:
             A new Vec3 instance with all components set to one
         """
     @staticmethod
-    def cartesian_to_spherical(v: "Vec3", wrap_around: bool = False) -> "Vec3":
+    def cartesian_to_spherical(v: Vec3, wrap_around: bool = False) -> Vec3:
         """
         Converts cartesian coordinates to spherical coordinates.
 
@@ -72,7 +72,7 @@ class Vec3:
             A Vec3 instance representing spherical coordinates
         """
     @staticmethod
-    def spherical_to_cartesian(vec: "Vec3") -> "Vec3":
+    def spherical_to_cartesian(vec: Vec3) -> Vec3:
         """
         Converts spherical coordinates to cartesian coordinates.
 
@@ -87,7 +87,7 @@ class Vec3:
             A Vec3 instance representing cartesian coordinates
         """
     @staticmethod
-    def spherical_to_image(v: "Vec3", width: int = 1, height: int = 1) -> tuple[float, float]:
+    def spherical_to_image(v: Vec3, width: int = 1, height: int = 1) -> tuple[float, float]:
         """
         Converts spherical coordinates to image coordinates.
 
@@ -106,7 +106,7 @@ class Vec3:
             A tuple of floats representing image coordinates
         """
     @staticmethod
-    def image_to_spherical(x: float, y: float, width: int = 1, height: int = 1) -> "Vec3":
+    def image_to_spherical(x: float, y: float, width: int = 1, height: int = 1) -> Vec3:
         """
         Converts image coordinates to spherical coordinates.
 
@@ -127,7 +127,7 @@ class Vec3:
             A Vec3 instance representing spherical coordinates
         """
     @staticmethod
-    def cartesian_to_cylindrical(vec: "Vec3") -> "Vec3":
+    def cartesian_to_cylindrical(vec: Vec3) -> Vec3:
         """
         Converts cartesian coordinates to cylindrical coordinates.
 
@@ -142,7 +142,7 @@ class Vec3:
             A Vec3 instance representing cylindrical coordinates
         """
     @staticmethod
-    def cylindrical_to_cartesian(vec: "Vec3") -> "Vec3":
+    def cylindrical_to_cartesian(vec: Vec3) -> Vec3:
         """
         Converts cylindrical coordinates to cartesian coordinates.
 
@@ -177,7 +177,7 @@ class Vec3:
             The length of the vector
         """
     @property
-    def unit_vector(self) -> "Vec3":
+    def unit_vector(self) -> Vec3:
         """
         Returns a unit vector in the same direction as the original vector.
 
@@ -216,7 +216,7 @@ class Vec3:
         float
             The radial distance
         """
-    def dot(self, other: "Vec3") -> float:
+    def dot(self, other: Vec3) -> float:
         """
         Returns the dot product of this vector and another vector.
 
@@ -230,7 +230,7 @@ class Vec3:
         float
             The dot product
         """
-    def cross(self, other: "Vec3") -> "Vec3":
+    def cross(self, other: Vec3) -> Vec3:
         """
         Returns the cross product of this vector and another vector.
 
@@ -244,7 +244,7 @@ class Vec3:
         Vec3
             The cross product
         """
-    def rotate_around(self, axis: "Vec3", theta: float) -> "Vec3":
+    def rotate_around(self, axis: Vec3, theta: float) -> Vec3:
         """
         Rotates the vector around a given axis by a given angle.
 
@@ -269,18 +269,18 @@ class Vec3:
         list[float]
             The vector's components as a list of floats
         """
-    def __add__(self, other: "Vec3") -> "Vec3": ...
-    def __iadd__(self, other: "Vec3") -> None: ...
-    def __sub__(self, other: "Vec3") -> "Vec3": ...
-    def __isub__(self, other: "Vec3") -> None: ...
-    def __mul__(self, factor: float) -> "Vec3": ...
+    def __add__(self, other: Vec3) -> Vec3: ...
+    def __iadd__(self, other: Vec3) -> None: ...
+    def __sub__(self, other: Vec3) -> Vec3: ...
+    def __isub__(self, other: Vec3) -> None: ...
+    def __mul__(self, factor: float) -> Vec3: ...
     def __imul__(self, factor: float) -> None: ...
-    def __matmul__(self, other: Mat4) -> "Vec3": ...
-    def __truediv__(self, factor: float) -> "Vec3": ...
+    def __matmul__(self, other: Mat4) -> Vec3: ...
+    def __truediv__(self, factor: float) -> Vec3: ...
     def __itruediv__(self, factor: float) -> None: ...
-    def __neg__(self) -> "Vec3": ...
-    def __eq__(self, other: "Vec3") -> bool: ...
-    def __ne__(self, other: "Vec3") -> bool: ...
+    def __neg__(self) -> Vec3: ...
+    def __eq__(self, other: Vec3) -> bool: ...
+    def __ne__(self, other: Vec3) -> bool: ...
     def __getitem__(self, index: int) -> float: ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...

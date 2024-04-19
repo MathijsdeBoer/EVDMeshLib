@@ -1,5 +1,5 @@
+from collections.abc import Hashable, Mapping
 from pathlib import Path
-from typing import Hashable, Mapping
 
 import monai.transforms as mt
 import numpy as np

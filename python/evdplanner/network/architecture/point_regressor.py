@@ -1,8 +1,9 @@
 """
 Point regressor model.
 """
+from collections.abc import Callable, Sequence
 from math import ceil, log2, prod
-from typing import Any, Callable, Sequence
+from typing import Any
 
 import optuna
 import torch
@@ -195,7 +196,7 @@ class PointRegressor(Regressor, OptimizableModel):
             )
 
             if self.final_bias:
-                if isinstance(self.final_bias, (int, float)):
+                if isinstance(self.final_bias, int | float):
                     logger.debug(f"Setting final_bias={self.final_bias}")
                     linear.bias.data.fill_(self.final_bias)
                 elif isinstance(self.final_bias, Sequence):

@@ -3,8 +3,8 @@ A class to manage markups in 3D Slicer.
 """
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from .display_settings import DisplaySettings
 from .fiducial import Fiducial

@@ -2,7 +2,7 @@
 Mirror Transform.
 """
 import random
-from typing import Sequence
+from collections.abc import Sequence
 
 import monai.transforms as mt
 import torch

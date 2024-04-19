@@ -3,7 +3,8 @@ Plotting commands for the CLI.
 """
 import click
 
-from evdplanner.cli.plot.keypoints import keypoints
+from .errors import errors
+from .keypoints import keypoints
 
 
 @click.group()
@@ -18,4 +19,5 @@ def plot() -> None:
     pass
 
 
+plot.add_command(errors)
 plot.add_command(keypoints)

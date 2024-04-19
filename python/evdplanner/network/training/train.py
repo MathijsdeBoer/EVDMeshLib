@@ -1,8 +1,8 @@
 """
 The training function for the EVDPlanner model.
 """
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Mapping
 
 import arrow
 from lightning import pytorch as pl

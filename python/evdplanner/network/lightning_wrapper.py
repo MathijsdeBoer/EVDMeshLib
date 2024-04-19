@@ -1,7 +1,8 @@
 """
 The LightningWrapper class, which is a wrapper around a PyTorch model.
 """
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import lightning.pytorch as pl
 import optuna
@@ -197,6 +198,7 @@ class LightningWrapper(pl.LightningModule):
             return {
                 "optimizer": self.optimizer,
                 "lr_scheduler": self.scheduler,
+                "monitor": "hp_metric",
             }
 
     def on_train_start(self) -> None:

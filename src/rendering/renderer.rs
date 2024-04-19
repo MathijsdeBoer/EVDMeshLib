@@ -41,7 +41,11 @@ impl Renderer {
             .map(|(y, x)| {
                 (
                     (*y, *x),
-                    self.mesh.intersect(&self.camera.cast_ray(*x as f64, *y as f64), intersection_mode, epsilon),
+                    self.mesh.intersect(
+                        &self.camera.cast_ray(*x as f64, *y as f64),
+                        intersection_mode,
+                        epsilon,
+                    ),
                 )
             })
             .collect();
