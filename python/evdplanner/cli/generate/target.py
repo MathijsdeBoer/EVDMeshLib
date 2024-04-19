@@ -50,6 +50,8 @@ def _measure(
     radius: float = 2.0,
     radial_samples: int = 8,
     radial_rings: int = 2,
+    objective_distance_weight: float = 0.5,
+    thickness_threshold: float = 10.0,
 ) -> Vec3:
     camera = Camera(
         origin=kp,
@@ -77,7 +79,7 @@ def _measure(
                 midpoint, distance, thickness, valid = _ray_sample(mesh, ray)
 
                 if valid:
-                    objective = _objective_fn(distance, thickness)
+                    objective = _objective_fn(distance, thickness, objective_distance_weight, thickness_threshold)
                     if check_radially:
                         radial_distance = 0.0
                         radial_thickness = 0.0
@@ -97,7 +99,7 @@ def _measure(
                                 radial_distance += rd
                                 radial_thickness += rt
 
-                        objective += _objective_fn(radial_distance, radial_thickness)
+                        objective += _objective_fn(radial_distance, radial_thickness, 1.0 - objective_distance_weight, thickness_threshold)
                     if objective < min_loss:
                         min_loss = objective
                         best_point = midpoint
@@ -142,6 +144,49 @@ def _measure(
     ),
 )
 @click.option(
+    "-s",
+    "--steps",
+    type=int,
+    default=128,
+    show_default=True,
+    help="Number of steps per iteration.",
+)
+@click.option(
+    "-i",
+    "--iterations",
+    type=int,
+    default=3,
+    show_default=True,
+    help="Number of iterations.",
+)
+@click.option(
+    "--radial",
+    "check_radially",
+    is_flag=True,
+    help="Check radial distance and thickness.",
+)
+@click.option(
+    "--radius",
+    type=float,
+    default=4.0,
+    show_default=True,
+    help="Radius for radial distance and thickness.",
+)
+@click.option(
+    "--radial-samples",
+    type=int,
+    default=8,
+    show_default=True,
+    help="Number of radial samples.",
+)
+@click.option(
+    "--radial-rings",
+    type=int,
+    default=2,
+    show_default=True,
+    help="Number of radial rings.",
+)
+@click.option(
     "-v",
     "--verbosity",
     count=True,
@@ -151,18 +196,37 @@ def target(
     mesh: Path,
     kocher: Path,
     output: Path,
+    steps: int = 128,
+    iterations: int = 3,
+    check_radially: bool = True,
+    radius: float = 4.0,
+    radial_samples: int = 8,
+    radial_rings: int = 2,
     verbosity: int = 0,
 ) -> None:
     """
     CLI command for measuring target points.
     """
+    from time import time
+
     from evdplanner.cli import set_verbosity
     from evdplanner.geometry import Mesh
     from evdplanner.generation import find_closest_intersection
     from evdplanner.linalg import Vec3
     from evdplanner.markups import DisplaySettings, MarkupManager
 
+    start = time()
     set_verbosity(verbosity)
+    logger.debug(f"mesh: {mesh}")
+    logger.debug(f"kocher: {kocher}")
+    logger.debug(f"output: {output}")
+    logger.debug(f"steps: {steps}")
+    logger.debug(f"iterations: {iterations}")
+    logger.debug(f"check_radially: {check_radially}")
+    if check_radially:
+        logger.debug(f"radius: {radius}")
+        logger.debug(f"radial_samples: {radial_samples}")
+        logger.debug(f"radial_rings: {radial_rings}")
 
     logger.info(f"Loading mesh from {mesh}.")
     mesh = Mesh.load(str(mesh))
@@ -176,9 +240,40 @@ def target(
     logger.debug(f"Left Kocher's point: {left_kp}.")
     logger.debug(f"Right Kocher's point: {right_kp}.")
 
+    # Empirically determined weights and thresholds.
+    if check_radially:
+        objective_distance_weight = 0.5
+        thickness_threshold = 10.0
+    else:
+        objective_distance_weight = 0.66
+        thickness_threshold = 10.0
+
+    logger.debug(f"Objective distance weight: {objective_distance_weight}.")
+    logger.debug(f"Thickness threshold: {thickness_threshold} mm.")
+
     logger.info("Measuring target points.")
-    left_tp = _measure(mesh, left_kp, radius=4.0)
-    right_tp = _measure(mesh, right_kp, radius=4.0)
+    left_tp = _measure(
+        mesh,
+        left_kp,
+        n_steps=steps,
+        n_iter=iterations,
+        check_radially=check_radially,
+        radius=radius,
+        radial_samples=radial_samples,
+        radial_rings=radial_rings,
+        objective_distance_weight=objective_distance_weight,
+        thickness_threshold=thickness_threshold,
+    )
+    right_tp = _measure(
+        mesh,
+        right_kp,
+        n_steps=steps,
+        n_iter=iterations,
+        check_radially=check_radially,
+        radius=radius,
+        radial_samples=radial_samples,
+        radial_rings=radial_rings
+    )
 
     logger.info("Adding target points to markups.")
     markups.add_fiducial(
@@ -195,17 +290,21 @@ def target(
     logger.info("Saving target points.")
     markups.save(output)
 
-    left_distance = (left_tp - left_kp).length
-    right_distance = (right_tp - right_kp).length
+    if verbosity > 0:
+        left_distance = (left_tp - left_kp).length
+        right_distance = (right_tp - right_kp).length
 
-    logger.info(f"Left target point: {left_tp}.")
-    logger.info(f"Right target point: {right_tp}.")
+        logger.info(f"Left target point: {left_tp}.")
+        logger.info(f"Right target point: {right_tp}.")
 
-    logger.info(f"Left target distance: {left_distance:.3g} mm.")
-    logger.info(f"Right target distance: {right_distance:3g} mm.")
+        logger.info(f"Left target distance: {left_distance:.3g} mm.")
+        logger.info(f"Right target distance: {right_distance:3g} mm.")
 
-    left_closest = find_closest_intersection(mesh, left_tp)
-    right_closest = find_closest_intersection(mesh, right_tp)
+        if verbosity > 1:
+            left_closest = find_closest_intersection(mesh, left_tp)
+            right_closest = find_closest_intersection(mesh, right_tp)
 
-    logger.info(f"Left target closest wall distance: {(left_closest - left_tp).length} mm.")
-    logger.info(f"Right target closest wall distance: {(right_closest - right_tp).length} mm.")
+            logger.info(f"Left target closest wall distance: {(left_closest - left_tp).length} mm.")
+            logger.info(f"Right target closest wall distance: {(right_closest - right_tp).length} mm.")
+
+    logger.info(f"Elapsed time: {time() - start:.3g} s.")
