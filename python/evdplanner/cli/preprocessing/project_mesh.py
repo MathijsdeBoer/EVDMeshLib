@@ -250,7 +250,7 @@ def equirectangular(
             json.dump(projected_keypoints, f, indent=4)
 
 
-@project_mesh.command(name="orthographic")
+@project_mesh.command(name="perspective")
 @click.pass_context
 @click.option(
     "-k",
@@ -267,7 +267,7 @@ def equirectangular(
     show_default=True,
     help="Side of the Kocher projection.",
 )
-def orthographic(
+def perspective(
     ctx: click.Context,
     kocher: Path,
     side: str | None = None,
@@ -313,14 +313,14 @@ def orthographic(
     renders: list[tuple[str, np.ndarray]] = []
     for kp, side in sides_to_render:
         logger.info(f"Projecting mesh to {side} Kocher's Point")
-
         camera = Camera(
             kp,
             forward=(mesh.origin - kp).unit_vector,
-            up=Vec3(0, 0, 1),
+            up=Vec3(0, 0, -1),
             x_resolution=ctx.obj["resolution"],
             y_resolution=ctx.obj["resolution"],
-            camera_type=CameraType.Orthographic,
+            camera_type=CameraType.Perspective,
+            fov=90,
             size=125,
         )
         renderer = CPURenderer(
@@ -337,9 +337,9 @@ def orthographic(
         )
         logger.info("Rendering done")
 
-        render = far_render
+        render = near_render
         thickness = far_render[..., 0] - near_render[..., 0]
-        # Add thickness to the last channel
+        # Add thickness to the first channel
         render = np.dstack((thickness, render))
 
         renders.append((side, render))
@@ -349,6 +349,13 @@ def orthographic(
         depth_image = render[..., 1]
         normal_image = render[..., 2:]
 
+        logger.debug(f"Thickness image: {thickness_image.shape} {thickness_image.dtype}")
+        logger.debug(f"Thickness Image: {thickness_image.min()} {thickness_image.max()}")
+        logger.debug(f"Depth image: {depth_image.shape} {depth_image.dtype}")
+        logger.debug(f"Depth Image: {depth_image.min()} {depth_image.max()}")
+        logger.debug(f"Normal image: {normal_image.shape} {normal_image.dtype}")
+        logger.debug(f"Normal Image: {normal_image.min()} {normal_image.max()}")
+
         thickness_image = normalize_image(thickness_image)
         depth_image = normalize_image(depth_image)
         normal_image += 1.0
@@ -357,6 +364,9 @@ def orthographic(
         thickness_image = (thickness_image * 65535).astype(np.uint16)
         depth_image = (depth_image * 65535).astype(np.uint16)
         normal_image = (normal_image * 255).astype(np.uint8)
+
+        if not ctx.obj["output"].exists():
+            ctx.obj["output"].mkdir(parents=True)
 
         thickness_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_{side}_thickness.png"
         depth_output = ctx.obj["output"] / f"map_{ctx.obj['mesh_name']}_{side}_depth.png"

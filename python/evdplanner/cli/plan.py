@@ -53,19 +53,6 @@ import click
     help="Path to the ventricles.",
 )
 @click.option(
-    "--ventricles-model",
-    type=click.Path(
-        exists=True,
-        dir_okay=False,
-        file_okay=True,
-        readable=True,
-        resolve_path=True,
-        path_type=Path,
-    ),
-    required=False,
-    help="Path to the ventricles model.",
-)
-@click.option(
     "--gpu-model",
     is_flag=True,
     default=False,
@@ -88,7 +75,6 @@ def plan(
     skin_model: Path,
     output: Path,
     ventricles: Path | None = None,
-    ventricles_model: Path | None = None,
     gpu_model: bool = False,
     verbose: int = 0,
     write_intermediate: bool = False,
@@ -127,7 +113,13 @@ def plan(
     from evdplanner.markups import DisplaySettings, MarkupManager
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.transforms import default_load_transforms
-    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+    from evdplanner.rendering import (
+        Camera,
+        CameraType,
+        CPURenderer,
+        IntersectionSort,
+        find_target,
+    )
     from evdplanner.rendering.utils import normalize_image
 
     start = time()
@@ -288,6 +280,73 @@ def plan(
         )
         manager.save(output / "kocher_predicted.mrk.json")
 
+    logger.info("Planning EVD trajectory.")
+    logger.info("Loading ventricles...")
+    ventricles = Mesh.load(str(ventricles), num_samples=10_000_000)
+
+    logger.info("Finding targets...")
+    logger.debug("Left target...")
+    left_tgt, _ = find_target(
+        mesh=ventricles,
+        origin=left_kp,
+        n_steps=256,
+        n_iter=3,
+        check_radially=True,
+        radius=1.5,
+        radial_rings=3,
+        radial_samples=16,
+        objective_distance_weight=0.66,
+        thickness_threshold=10.0,
+        depth_threshold=80.0,
+    )
+    logger.debug("Right target...")
+    right_tgt, _ = find_target(
+        mesh=ventricles,
+        origin=right_kp,
+        n_steps=256,
+        n_iter=3,
+        check_radially=True,
+        radius=1.5,
+        radial_rings=3,
+        radial_samples=16,
+        objective_distance_weight=0.66,
+        thickness_threshold=10.0,
+        depth_threshold=80.0,
+    )
+
+    logger.debug(f"Left target: {left_tgt}.")
+    logger.debug(f"Right target: {right_tgt}.")
+
+    logger.info("Creating markups...")
+    evd_display = DisplaySettings(
+        color=(0.35, 0.55, 0.85),
+        selected_color=(0.35, 0.55, 0.85),
+        active_color=(0.35, 0.55, 0.85),
+    )
+    evd_display.glyph_size = 3.0
+    evd_display.use_glyph_scale = False
+    evd_display.text_scale = 2.0
+    evd_display.line_thickness = 1.0
+
+    evd_markup = MarkupManager()
+    evd_markup.add_line(
+        label=("Left Kocher", "Left Target"),
+        description=("Left Kocher", "Left Target"),
+        position=(left_kp.as_float_list(), left_tgt.as_float_list()),
+        display=evd_display,
+        visible_points=True,
+    )
+
+    evd_markup.add_line(
+        label=("Right Kocher", "Right Target"),
+        description=("Right Kocher", "Right Target"),
+        position=(right_kp.as_float_list(), right_tgt.as_float_list()),
+        display=evd_display,
+        visible_points=True,
+    )
+
+    logger.info("Saving markups...")
+    evd_markup.save(output / "EVD.mrk.json")
+
     end = time()
     logger.info(f"Planning took {end - start:.3f}s.")
-    logger.warning("Command implementation not yet finished")

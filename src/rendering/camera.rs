@@ -110,45 +110,41 @@ impl Camera {
     }
 
     pub fn cast_ray(&self, x: f64, y: f64) -> Ray {
+        let x = x / self.x_resolution as f64;
+        let y = y / self.y_resolution as f64;
         match self.camera_type {
             CameraType::Perspective => {
-                let origin = self.origin;
-                let forward = self.forward;
-                let left = self.left;
-                let up = self.up;
+                let x = x - 0.5;
+                let y = y - 0.5;
 
                 // Imaginary plane at distance 1 from the camera
-                let plane_distance = 1.0;
-                let plane_width = 2.0 * (self.fov / 2.0).tan();
+                // width = 2 * distance * tan(1/2 * fov)
+                let plane_width = 2.0 * (self.fov * 0.5).tan();
                 let plane_height = plane_width / self.aspect_ratio;
 
                 // find the position of the pixel on the plane
-                let x = (x / self.x_resolution as f64 - 0.5) * plane_width;
-                let y = (y / self.y_resolution as f64 - 0.5) * plane_height;
-                let plane_position = left * x + up * y + forward * plane_distance;
+                let x = x * plane_width;
+                let y = y * plane_height;
+                let plane_position = self.origin + self.left * x + self.up * y + self.forward;
 
-                Ray::new(origin, (plane_position - origin).unit_vector())
+                Ray::new(self.origin, (plane_position - self.origin).unit_vector())
             }
             CameraType::Orthographic => {
-                let forward = self.forward;
-                let left = self.left;
-                let up = self.up;
+                let x = (x - 0.5) * self.size * self.aspect_ratio;
+                let y = (y - 0.5) * self.size;
 
-                let x = (x / self.x_resolution as f64 - 0.5) * self.size * self.aspect_ratio;
-                let y = (y / self.y_resolution as f64 - 0.5) * self.size;
-
-                Ray::new(self.origin + left * x + up * y, forward)
+                Ray::new(self.origin + self.left * x + self.up * y, self.forward)
             }
             CameraType::Equirectangular => {
                 // Spherical sampling adapted from
                 // https://www.pbr-book.org/3ed-2018/Camera_Models/Environment_Camera
 
                 // Phi is pretty straightforward
-                let phi: f64 = PI * (y / self.y_resolution as f64);
+                let phi: f64 = PI * y;
 
                 // We want to ensure that the middle of the image (0.5, 0.5) maps to the forward
                 // direction, so we need to subtract 0.5 * PI from theta.
-                let theta: f64 = TWO_PI * (x / self.x_resolution as f64) - HALF_PI;
+                let theta: f64 = TWO_PI * x - HALF_PI;
 
                 // Direction in spherical coordinates
                 let spherical = Vec3::new(1.0, theta, phi);
@@ -222,6 +218,47 @@ impl Camera {
 mod test {
     use super::*;
     use crate::linalg::Vec3;
+
+    #[test]
+    fn test_perspective_cast_ray() {
+        let origin = Vec3::zero();
+        let forward = Vec3::new(0.0, -1.0, 0.0);
+        let up = Vec3::new(0.0, 0.0, 1.0);
+
+        let resolution = 512;
+        let half_res = resolution / 2;
+
+        let camera = Camera::new(
+            origin,
+            forward,
+            up,
+            resolution,
+            resolution,
+            CameraType::Perspective,
+            Some(90.0),
+            None,
+            None,
+        );
+
+        let directions = vec![(half_res, half_res, camera.forward)];
+
+        for (x, y, expected_direction) in directions {
+            let ray = camera.cast_ray(x as f64, y as f64);
+            assert_eq!(
+                ray.direction, expected_direction,
+                "Testing pixel ({}, {})",
+                x, y
+            );
+        }
+
+        let ray = camera.cast_ray(0.0, half_res as f64);
+        let ray2 = camera.cast_ray(resolution as f64, half_res as f64);
+        assert_eq!(
+            ray.direction.dot(&ray2.direction),
+            0.0,
+            "Testing orthogonality of rays"
+        );
+    }
 
     #[test]
     fn test_equirectangular_cast_ray() {

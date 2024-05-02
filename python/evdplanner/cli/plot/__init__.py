@@ -4,6 +4,7 @@ Plotting commands for the CLI.
 import click
 
 from .errors import errors
+from .evd import evd
 from .keypoints import keypoints
 
 
@@ -20,4 +21,5 @@ def plot() -> None:
 
 
 plot.add_command(errors)
+plot.add_command(evd)
 plot.add_command(keypoints)

@@ -33,22 +33,7 @@ impl Renderer {
         let mut image =
             Array3::<f64>::zeros((self.camera.y_resolution, self.camera.x_resolution, 4));
 
-        let image_pixels: Vec<(usize, usize)> =
-            iproduct!(0..self.camera.y_resolution, 0..self.camera.x_resolution).collect();
-
-        let values: Vec<((usize, usize), Option<Intersection>)> = image_pixels
-            .par_iter()
-            .map(|(y, x)| {
-                (
-                    (*y, *x),
-                    self.mesh.intersect(
-                        &self.camera.cast_ray(*x as f64, *y as f64),
-                        intersection_mode,
-                        epsilon,
-                    ),
-                )
-            })
-            .collect();
+        let values = self.render_internal(intersection_mode, epsilon);
 
         for ((y, x), intersection) in values {
             if let Some(intersection) = intersection {
@@ -60,5 +45,43 @@ impl Renderer {
         }
 
         image.into_pyarray(py).to_owned()
+    }
+
+    pub fn generate_intersections(
+        &self,
+        intersection_mode: IntersectionSort,
+        epsilon: f64,
+    ) -> Vec<((usize, usize), Intersection)> {
+        self.render_internal(intersection_mode, epsilon)
+            .into_iter()
+            .filter_map(|((y, x), intersection)| {
+                intersection.map(|intersection| ((y, x), intersection))
+            })
+            .collect()
+    }
+}
+
+impl Renderer {
+    pub fn render_internal(
+        &self,
+        intersection_mode: IntersectionSort,
+        epsilon: f64,
+    ) -> Vec<((usize, usize), Option<Intersection>)> {
+        let image_pixels: Vec<(usize, usize)> =
+            iproduct!(0..self.camera.y_resolution, 0..self.camera.x_resolution).collect();
+
+        image_pixels
+            .par_iter()
+            .map(|(y, x)| {
+                (
+                    (*y, *x),
+                    self.mesh.intersect(
+                        &self.camera.cast_ray(*x as f64, *y as f64),
+                        intersection_mode,
+                        epsilon,
+                    ),
+                )
+            })
+            .collect()
     }
 }

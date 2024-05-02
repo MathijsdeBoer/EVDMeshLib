@@ -2,11 +2,13 @@ mod camera;
 mod intersection;
 mod ray;
 mod renderer;
+mod target;
 
 pub use camera::{Camera, CameraType};
 pub use intersection::{Intersection, IntersectionSort};
 pub use ray::Ray;
 pub use renderer::Renderer;
+pub use target::{find_target, generate_objective_image, objective_function};
 
 use pyo3::prelude::*;
 
@@ -18,6 +20,10 @@ fn rendering(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<IntersectionSort>()?;
     m.add_class::<Ray>()?;
     m.add_class::<Renderer>()?;
+
+    m.add_function(wrap_pyfunction!(find_target, m)?)?;
+    m.add_function(wrap_pyfunction!(objective_function, m)?)?;
+    m.add_function(wrap_pyfunction!(generate_objective_image, m)?)?;
     Ok(())
 }
 

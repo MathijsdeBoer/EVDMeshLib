@@ -20,6 +20,9 @@ fn rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<rendering::IntersectionSort>()?;
     m.add_class::<rendering::Ray>()?;
     m.add_class::<rendering::Renderer>()?;
+    m.add_function(wrap_pyfunction!(rendering::find_target, m)?)?;
+    m.add_function(wrap_pyfunction!(rendering::objective_function, m)?)?;
+    m.add_function(wrap_pyfunction!(rendering::generate_objective_image, m)?)?;
 
     Ok(())
 }

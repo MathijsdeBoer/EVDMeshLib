@@ -418,6 +418,7 @@ impl Mesh {
         let mut output_file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(path)
             .expect("Failed to open file {path}");
 

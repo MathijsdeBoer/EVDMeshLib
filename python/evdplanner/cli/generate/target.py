@@ -2,116 +2,8 @@ from pathlib import Path
 
 import click
 import numpy as np
-from loguru import logger
 
-from evdplanner.geometry import Mesh
-from evdplanner.linalg import Mat4, Vec3
-from evdplanner.rendering import Camera, CameraType, IntersectionSort, Ray
-
-
-def _objective_fn(
-    distance: float,
-    thickness: float,
-    distance_weight: float = 0.5,
-    thickness_threshold: float = 10.0,
-) -> float:
-    return distance * distance_weight - (
-        (1 - distance_weight) * max(0.0, thickness - thickness_threshold)
-    )
-
-
-def _ray_sample(
-    mesh: Mesh,
-    ray: Ray,
-) -> tuple[Vec3, float, float, bool]:
-    intersection = mesh.intersect(ray, IntersectionSort.Nearest)
-
-    if not intersection:
-        return Vec3.zero(), float("inf"), 0.0, False
-
-    distance = intersection.distance
-    new_ray = Ray(intersection.position + ray.direction * 1e-8, ray.direction)
-    new_intersection = mesh.intersect(new_ray, IntersectionSort.Nearest)
-    if not new_intersection:
-        return intersection.position, distance, 0.0, False
-
-    thickness = (intersection.position - new_intersection.position).length
-    midpoint = (intersection.position + new_intersection.position) / 2
-
-    return midpoint, distance, thickness, True
-
-
-def _measure(
-    mesh: Mesh,
-    kp: Vec3,
-    n_steps: int = 128,
-    n_iter: int = 3,
-    check_radially: bool = True,
-    radius: float = 2.0,
-    radial_samples: int = 8,
-    radial_rings: int = 2,
-    objective_distance_weight: float = 0.5,
-    thickness_threshold: float = 10.0,
-) -> Vec3:
-    camera = Camera(
-        origin=kp,
-        forward=(mesh.origin - kp).unit_vector,
-        up=Vec3(0.0, 0.0, 1.0),
-        x_resolution=1,
-        y_resolution=1,
-        camera_type=CameraType.Equirectangular,
-    )
-
-    min_loss = float("inf")
-    best_point = None
-
-    current_x = 0.5
-    current_y = 0.5
-    spread = 0.25
-
-    for i in range(n_iter):
-        logger.debug(f"Iteration {i + 1}/{n_iter}.")
-        logger.debug(f"Current point: ({current_x}, {current_y}).")
-        logger.debug(f"Spread: {spread}.")
-        for x in np.linspace(current_x - spread, current_x + spread, n_steps):
-            for y in np.linspace(current_y - spread, current_y + spread, n_steps):
-                ray = camera.cast_ray(x, y)
-                midpoint, distance, thickness, valid = _ray_sample(mesh, ray)
-
-                if valid:
-                    objective = _objective_fn(distance, thickness, objective_distance_weight, thickness_threshold)
-                    if check_radially:
-                        radial_distance = 0.0
-                        radial_thickness = 0.0
-
-                        for ring in range(radial_rings):
-                            for radial in range(radial_samples):
-                                ring_radius = radius * (ring + 1) / radial_rings
-                                angle = radial / radial_samples * 2 * np.pi
-                                matrix = Mat4.rotation(ray.direction, angle)
-
-                                perpendicular = ray.direction.cross(Vec3(0.0, 0.0, 1.0)).unit_vector
-                                perpendicular = perpendicular @ matrix
-                                radial_origin = ray.origin + perpendicular * ring_radius
-
-                                radial_ray = Ray(radial_origin, ray.direction)
-                                _, rd, rt, _ = _ray_sample(mesh, radial_ray)
-                                radial_distance += rd
-                                radial_thickness += rt
-
-                        objective += _objective_fn(radial_distance, radial_thickness, 1.0 - objective_distance_weight, thickness_threshold)
-                    if objective < min_loss:
-                        min_loss = objective
-                        best_point = midpoint
-                        current_x = x
-                        current_y = y
-
-        logger.debug(f"Best loss: {min_loss}.")
-        logger.debug(f"Best point: {best_point}.")
-
-        spread /= 4
-
-    return best_point
+from evdplanner.rs import Camera, CameraType
 
 
 @click.command()
@@ -147,7 +39,7 @@ def _measure(
     "-s",
     "--steps",
     type=int,
-    default=128,
+    default=256,
     show_default=True,
     help="Number of steps per iteration.",
 )
@@ -168,7 +60,7 @@ def _measure(
 @click.option(
     "--radius",
     type=float,
-    default=4.0,
+    default=1.5,
     show_default=True,
     help="Radius for radial distance and thickness.",
 )
@@ -187,6 +79,18 @@ def _measure(
     help="Number of radial rings.",
 )
 @click.option(
+    "--generate-line",
+    is_flag=True,
+    help="Generate line between Kocher's and target points.",
+)
+@click.option(
+    "--line-thickness",
+    type=float,
+    default=3.0,
+    show_default=True,
+    help="Thickness of the line.",
+)
+@click.option(
     "-v",
     "--verbosity",
     count=True,
@@ -196,12 +100,14 @@ def target(
     mesh: Path,
     kocher: Path,
     output: Path,
-    steps: int = 128,
+    steps: int = 256,
     iterations: int = 3,
     check_radially: bool = True,
-    radius: float = 4.0,
+    radius: float = 1.5,
     radial_samples: int = 8,
     radial_rings: int = 2,
+    generate_line: bool = False,
+    line_thickness: float = 3.0,
     verbosity: int = 0,
 ) -> None:
     """
@@ -209,11 +115,15 @@ def target(
     """
     from time import time
 
+    import SimpleITK as sitk
+    from loguru import logger
+
     from evdplanner.cli import set_verbosity
-    from evdplanner.geometry import Mesh
     from evdplanner.generation import find_closest_intersection
+    from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
     from evdplanner.markups import DisplaySettings, MarkupManager
+    from evdplanner.rendering import find_target, generate_objective_image
 
     start = time()
     set_verbosity(verbosity)
@@ -229,7 +139,7 @@ def target(
         logger.debug(f"radial_rings: {radial_rings}")
 
     logger.info(f"Loading mesh from {mesh}.")
-    mesh = Mesh.load(str(mesh))
+    mesh = Mesh.load(str(mesh), num_samples=100_000_000)
     logger.info(f"Loading Kocher's point from {kocher}.")
     kocher = MarkupManager.load(kocher)
 
@@ -241,18 +151,19 @@ def target(
     logger.debug(f"Right Kocher's point: {right_kp}.")
 
     # Empirically determined weights and thresholds.
+    thickness_threshold = 10.0
+    depth_threshold = 80.0
     if check_radially:
-        objective_distance_weight = 0.5
-        thickness_threshold = 10.0
+        objective_distance_weight = 0.75
     else:
         objective_distance_weight = 0.66
-        thickness_threshold = 10.0
 
     logger.debug(f"Objective distance weight: {objective_distance_weight}.")
     logger.debug(f"Thickness threshold: {thickness_threshold} mm.")
+    logger.debug(f"Depth threshold: {depth_threshold} mm.")
 
     logger.info("Measuring target points.")
-    left_tp = _measure(
+    left_tp, left_loss = find_target(
         mesh,
         left_kp,
         n_steps=steps,
@@ -263,8 +174,9 @@ def target(
         radial_rings=radial_rings,
         objective_distance_weight=objective_distance_weight,
         thickness_threshold=thickness_threshold,
+        depth_threshold=depth_threshold,
     )
-    right_tp = _measure(
+    right_tp, right_loss = find_target(
         mesh,
         right_kp,
         n_steps=steps,
@@ -272,7 +184,10 @@ def target(
         check_radially=check_radially,
         radius=radius,
         radial_samples=radial_samples,
-        radial_rings=radial_rings
+        radial_rings=radial_rings,
+        objective_distance_weight=objective_distance_weight,
+        thickness_threshold=thickness_threshold,
+        depth_threshold=depth_threshold,
     )
 
     logger.info("Adding target points to markups.")
@@ -290,21 +205,169 @@ def target(
     logger.info("Saving target points.")
     markups.save(output)
 
+    if generate_line:
+        logger.info("Generating line.")
+        evd_display = DisplaySettings(
+            color=(0.35, 0.55, 0.85),
+            selected_color=(0.35, 0.55, 0.85),
+            active_color=(0.35, 0.55, 0.85),
+        )
+
+        evd_display.glyph_size = line_thickness
+        evd_display.use_glyph_scale = False
+        evd_display.text_scale = 2.0
+        evd_display.line_thickness = 1.0
+
+        markups = MarkupManager()
+        markups.add_line(
+            label=("Left Kocher", "Left Target"),
+            description=("Left Kocher", "Left Target"),
+            position=(left_kp.as_float_list(), left_tp.as_float_list()),
+            display=evd_display,
+            visible_points=True,
+        )
+
+        markups.add_line(
+            label=("Right Kocher", "Right Target"),
+            description=("Right Kocher", "Right Target"),
+            position=(right_kp.as_float_list(), right_tp.as_float_list()),
+            display=evd_display,
+            visible_points=True,
+        )
+
+        markups.save(output.parent / f"EVD.mrk.json")
+
     if verbosity > 0:
         left_distance = (left_tp - left_kp).length
         right_distance = (right_tp - right_kp).length
 
-        logger.info(f"Left target point: {left_tp}.")
-        logger.info(f"Right target point: {right_tp}.")
+        logger.info(f"Left target point: {left_tp}. loss: {left_loss:.3g}.")
+        logger.info(f"Right target point: {right_tp}. loss: {right_loss:.3g}.")
 
         logger.info(f"Left target distance: {left_distance:.3g} mm.")
-        logger.info(f"Right target distance: {right_distance:3g} mm.")
+        logger.info(f"Right target distance: {right_distance:.3g} mm.")
 
-        if verbosity > 1:
+        if verbosity > 2:
+            logger.info("Measuring closest wall distances.")
             left_closest = find_closest_intersection(mesh, left_tp)
             right_closest = find_closest_intersection(mesh, right_tp)
 
-            logger.info(f"Left target closest wall distance: {(left_closest - left_tp).length} mm.")
-            logger.info(f"Right target closest wall distance: {(right_closest - right_tp).length} mm.")
+            logger.info(
+                f"Left target closest wall distance: {(left_closest - left_tp).length} mm."
+            )
+            logger.info(
+                f"Right target closest wall distance: {(right_closest - right_tp).length} mm."
+            )
+
+            left_forward = (mesh.origin - left_kp).unit_vector
+            right_forward = (mesh.origin - right_kp).unit_vector
+            for iteration, fov in enumerate([45.0 / 2**i for i in range(iterations)]):
+                logger.info(f"Rendering with FOV: {fov:.3g}.")
+                left_camera = Camera(
+                    origin=left_kp,
+                    forward=left_forward,
+                    up=Vec3(0.0, 0.0, 1.0),
+                    x_resolution=steps,
+                    y_resolution=steps,
+                    fov=fov,
+                    camera_type=CameraType.Perspective,
+                )
+                right_camera = Camera(
+                    origin=right_kp,
+                    forward=right_forward,
+                    up=Vec3(0.0, 0.0, 1.0),
+                    x_resolution=steps,
+                    y_resolution=steps,
+                    fov=fov,
+                    camera_type=CameraType.Perspective,
+                )
+
+                logger.debug(f"{left_forward=}")
+                logger.debug(f"{right_forward=}")
+
+                iter_radius = radius * (iteration / (iterations - 1))
+                logger.debug(f"{iter_radius=}")
+
+                logger.debug("Generating objective images.")
+                left_objective_image = generate_objective_image(
+                    mesh=mesh,
+                    camera=left_camera,
+                    check_radially=check_radially and iteration > 0,
+                    radius=iter_radius,
+                    radial_samples=radial_samples,
+                    radial_rings=radial_rings,
+                    objective_distance_weight=objective_distance_weight,
+                    thickness_threshold=thickness_threshold,
+                    depth_threshold=depth_threshold,
+                    epsilon=1e-8,
+                )
+                right_objective_image = generate_objective_image(
+                    mesh=mesh,
+                    camera=right_camera,
+                    check_radially=check_radially and iteration > 0,
+                    radius=iter_radius,
+                    radial_samples=radial_samples,
+                    radial_rings=radial_rings,
+                    objective_distance_weight=objective_distance_weight,
+                    thickness_threshold=thickness_threshold,
+                    depth_threshold=depth_threshold,
+                    epsilon=1e-8,
+                )
+
+                logger.debug("Finding best objective points.")
+                logger.debug(f"{np.min(left_objective_image[..., 0])=}")
+                logger.debug(f"{np.max(left_objective_image[..., 0])=}")
+                logger.debug(f"{np.min(right_objective_image[..., 0])=}")
+                logger.debug(f"{np.max(right_objective_image[..., 0])=}")
+                left_best = np.unravel_index(
+                    np.argmin(left_objective_image[..., 0]), left_objective_image[..., 0].shape
+                )
+                right_best = np.unravel_index(
+                    np.argmin(right_objective_image[..., 0]), right_objective_image[..., 0].shape
+                )
+                logger.debug(f"Left best: {left_best}.")
+                logger.debug(f"Right best: {right_best}.")
+
+                logger.debug("Setting camera forward vectors.")
+                left_forward = left_camera.cast_ray(*left_best[::-1]).direction
+                right_forward = right_camera.cast_ray(*right_best[::-1]).direction
+
+                logger.debug("Post-processing objective images.")
+                left_penalty = left_objective_image[..., -2] + (
+                    left_objective_image[..., -1] * 0.5
+                )
+                right_penalty = right_objective_image[..., -2] + (
+                    right_objective_image[..., -1] * 0.5
+                )
+
+                left_penalty -= depth_threshold
+                right_penalty -= depth_threshold
+
+                left_penalty[left_penalty < 1] = 1
+                right_penalty[right_penalty < 1] = 1
+
+                left_penalty **= 2
+                right_penalty **= 2
+
+                left_objective_image = np.concatenate(
+                    [left_objective_image, left_penalty[..., None]], axis=-1
+                )
+                right_objective_image = np.concatenate(
+                    [right_objective_image, right_penalty[..., None]], axis=-1
+                )
+
+                left_objective_image = np.expand_dims(left_objective_image, axis=-2)
+                right_objective_image = np.expand_dims(right_objective_image, axis=-2)
+
+                left_objective_image = sitk.GetImageFromArray(left_objective_image)
+                right_objective_image = sitk.GetImageFromArray(right_objective_image)
+
+                logger.debug("Writing objective images.")
+                sitk.WriteImage(
+                    left_objective_image, output.parent / f"ObjectiveImageLeft_{fov:.3g}.nii.gz"
+                )
+                sitk.WriteImage(
+                    right_objective_image, output.parent / f"ObjectiveImageRight_{fov:.3g}.nii.gz"
+                )
 
     logger.info(f"Elapsed time: {time() - start:.3g} s.")

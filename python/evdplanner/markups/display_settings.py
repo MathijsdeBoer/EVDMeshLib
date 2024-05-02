@@ -25,6 +25,7 @@ class DisplaySettings:
     glyph_type: str = "Sphere3D"
     glyph_scale: float = 3.0
     glyph_size: float = 5.0
+    use_glyph_scale: bool = True
 
     slice_projection: bool = False
     slice_projection_use_fiducial_color: bool = True
@@ -115,6 +116,7 @@ class DisplaySettings:
         settings.glyph_type = data["glyphType"]
         settings.glyph_scale = data["glyphScale"]
         settings.glyph_size = data["glyphSize"]
+        settings.use_glyph_scale = data.get("useGlyphScale", True)
         settings.slice_projection = data["sliceProjection"]
         settings.slice_projection_use_fiducial_color = data["sliceProjectionUseFiducialColor"]
         settings.slice_projection_outlined_behind_slice_plane = data[
@@ -156,6 +158,7 @@ class DisplaySettings:
             "glyphType": self.glyph_type,
             "glyphScale": self.glyph_scale,
             "glyphSize": self.glyph_size,
+            "useGlyphScale": self.use_glyph_scale,
             "sliceProjection": self.slice_projection,
             "sliceProjectionUseFiducialColor": self.slice_projection_use_fiducial_color,
             "sliceProjectionOutlinedBehindSlicePlane": self.slice_projection_outlined_behind_slice_plane,

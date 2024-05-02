@@ -8,6 +8,9 @@ from evdplanner.rs.rendering import (
     Intersection,
     IntersectionSort,
     Ray,
+    find_target,
+    generate_objective_image,
+    objective_function,
 )
 
 __all__ = [
@@ -17,4 +20,7 @@ __all__ = [
     "Intersection",
     "IntersectionSort",
     "Ray",
+    "find_target",
+    "objective_function",
+    "generate_objective_image",
 ]
