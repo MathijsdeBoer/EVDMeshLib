@@ -8,7 +8,7 @@ from monai.utils import MetaKeys
 
 from evdplanner.geometry import Mesh
 from evdplanner.linalg import Vec3
-from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
 
 
 class MeshRenderd(mt.MapTransform):
@@ -38,7 +38,7 @@ class MeshRenderd(mt.MapTransform):
                 msg = f"Expected a Mesh, but got {type(mesh)}."
                 raise ValueError(msg)
 
-            renderer = CPURenderer(
+            renderer = Renderer(
                 camera=Camera(
                     origin=mesh.origin,
                     forward=Vec3(0.0, -1.0, 0.0),

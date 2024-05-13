@@ -80,7 +80,7 @@ def errors(
     from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager
-    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
     subdirs = [x for x in input_path.iterdir() if x.is_dir()]
@@ -290,7 +290,7 @@ def errors(
             y_resolution=4096,
             camera_type=CameraType.Equirectangular,
         )
-        renderer = CPURenderer(camera, mesh)
+        renderer = Renderer(camera, mesh)
 
         render = renderer.render(IntersectionSort.Farthest)[..., 0]
         render = normalize_image(render, lower_percentile=1.0, upper_percentile=85.0)

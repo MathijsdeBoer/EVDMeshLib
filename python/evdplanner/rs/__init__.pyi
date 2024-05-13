@@ -6,7 +6,7 @@ from .linalg import Mat4, Vec3
 from .rendering import (
     Camera,
     CameraType,
-    CPURenderer,
+    Renderer,
     Intersection,
     IntersectionSort,
     Ray,
@@ -22,5 +22,5 @@ __all__ = [
     "Mat4",
     "Vec3",
     "Ray",
-    "CPURenderer",
+    "Renderer",
 ]

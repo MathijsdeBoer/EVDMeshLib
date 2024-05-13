@@ -7,7 +7,7 @@ use rayon::prelude::*;
 use crate::geometry::Mesh;
 use crate::rendering::{Camera, Intersection, IntersectionSort};
 
-#[pyclass(name = "CPURenderer", subclass)]
+#[pyclass]
 pub struct Renderer {
     #[pyo3(get, set)]
     pub camera: Camera,
@@ -33,7 +33,8 @@ impl Renderer {
         let mut image =
             Array3::<f64>::zeros((self.camera.y_resolution, self.camera.x_resolution, 4));
 
-        let values = self.render_internal(intersection_mode, epsilon);
+        let values: Vec<((usize, usize), Option<Intersection>)> =
+            self.render_internal(intersection_mode, epsilon);
 
         for ((y, x), intersection) in values {
             if let Some(intersection) = intersection {

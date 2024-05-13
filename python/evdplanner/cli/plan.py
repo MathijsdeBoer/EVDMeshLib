@@ -116,7 +116,7 @@ def plan(
     from evdplanner.rendering import (
         Camera,
         CameraType,
-        CPURenderer,
+        Renderer,
         IntersectionSort,
         find_target,
     )
@@ -156,7 +156,7 @@ def plan(
     logger.debug(f"Camera: {camera}")
 
     logger.info("Rendering skin...")
-    renderer = CPURenderer(camera, skin)
+    renderer = Renderer(camera, skin)
     skin_render = renderer.render(IntersectionSort.Farthest)
     logger.debug(f"Skin render shape: {skin_render.shape}")
 
@@ -293,9 +293,9 @@ def plan(
         n_iter=3,
         check_radially=True,
         radius=1.5,
-        radial_rings=3,
-        radial_samples=16,
-        objective_distance_weight=0.66,
+        radial_rings=2,
+        radial_samples=8,
+        objective_distance_weight=0.75,
         thickness_threshold=10.0,
         depth_threshold=80.0,
     )
@@ -307,9 +307,9 @@ def plan(
         n_iter=3,
         check_radially=True,
         radius=1.5,
-        radial_rings=3,
-        radial_samples=16,
-        objective_distance_weight=0.66,
+        radial_rings=2,
+        radial_samples=8,
+        objective_distance_weight=0.75,
         thickness_threshold=10.0,
         depth_threshold=80.0,
     )

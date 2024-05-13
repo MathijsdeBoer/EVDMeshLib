@@ -4,7 +4,7 @@ Rendering module for the evdplanner package.
 from evdplanner.rs.rendering import (
     Camera,
     CameraType,
-    CPURenderer,
+    Renderer,
     Intersection,
     IntersectionSort,
     Ray,
@@ -16,7 +16,7 @@ from evdplanner.rs.rendering import (
 __all__ = [
     "Camera",
     "CameraType",
-    "CPURenderer",
+    "Renderer",
     "Intersection",
     "IntersectionSort",
     "Ray",
