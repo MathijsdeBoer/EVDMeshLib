@@ -2,7 +2,7 @@ import numpy as np
 
 from evdplanner.geometry import Mesh
 from evdplanner.linalg import Vec3
-from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
 
 
 def find_closest_intersection(
@@ -65,7 +65,7 @@ def find_closest_intersection_percentiles(
         y_resolution=resolution,
         camera_type=CameraType.Equirectangular,
     )
-    renderer = CPURenderer(
+    renderer = Renderer(
         mesh=mesh,
         camera=camera,
     )

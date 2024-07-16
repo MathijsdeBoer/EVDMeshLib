@@ -4,7 +4,7 @@ Rendering module.
 from .camera import Camera, CameraType
 from .intersection import Intersection, IntersectionSort
 from .ray import Ray
-from .renderer import CPURenderer
+from .renderer import Renderer
 from .target import find_target, generate_objective_image, objective_function
 
 __all__ = [
@@ -13,7 +13,7 @@ __all__ = [
     "Intersection",
     "IntersectionSort",
     "Ray",
-    "CPURenderer",
+    "Renderer",
     "find_target",
     "objective_function",
     "generate_objective_image",

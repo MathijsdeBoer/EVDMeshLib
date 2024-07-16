@@ -123,7 +123,7 @@ def equirectangular(
 
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager, MarkupTypes
-    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
     logger.debug(f"Number of triangles: {ctx.obj['mesh'].num_triangles}")
@@ -144,7 +144,7 @@ def equirectangular(
         camera_type=CameraType.Equirectangular,
     )
 
-    renderer = CPURenderer(
+    renderer = Renderer(
         camera,
         mesh=mesh,
     )
@@ -278,7 +278,7 @@ def perspective(
 
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager
-    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
     logger.info(f"Loading Kocher projection from {kocher}")
@@ -323,7 +323,7 @@ def perspective(
             fov=90,
             size=125,
         )
-        renderer = CPURenderer(
+        renderer = Renderer(
             camera,
             mesh=mesh,
         )

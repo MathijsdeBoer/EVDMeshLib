@@ -124,6 +124,83 @@ fn process_intersection(
     (distance, thickness)
 }
 
+fn process_intersection2(
+    mesh: &Mesh,
+    origin: &Vec3,
+    intersection: &Option<Intersection>,
+    check_radially: bool,
+    radius: f64,
+    radial_samples: usize,
+    radial_interval: f64,
+    epsilon: f64
+) -> (f64, f64) {
+    let mut distance = f64::INFINITY;
+    let mut thickness = 0.0;
+    
+    if let Some(intersection) = intersection {
+        distance = intersection.distance;
+        let direction = (intersection.position - *origin).unit_vector();
+        let ray = Ray::new(intersection.position + direction * epsilon, direction);
+
+        let next_intersection = mesh.intersect(&ray, IntersectionSort::Nearest, epsilon);
+        if let Some(next_intersection) = next_intersection {
+            thickness = (intersection.position - next_intersection.position).length();
+        }
+        
+        if check_radially && thickness > 0.0 {
+            // As opposed to the previous implementation, we will now sample the radial rays
+            // in a star-like pattern, pointing out from the line between the intersection
+            // and next intersection point.
+            let n_steps = (thickness / radial_interval).floor() as usize;
+            let mut radial_rays: Vec<Ray> = vec![];
+            for i in 0..n_steps {
+                let offset = i as f64 * radial_interval;
+                let offset_origin = intersection.position + direction * offset;
+                for j in 0..radial_samples {
+                    let angle = 2.0 * std::f64::consts::PI * j as f64 / radial_samples as f64;
+                    let matrix = Mat4::rotation(direction, angle);
+                    let perpendicular = direction.cross(&Vec3::new(0.0, 0.0, 1.0)).unit_vector() * matrix;
+                    radial_rays.push(Ray::new(offset_origin, perpendicular));
+                }
+            }
+            
+            let radial_intersections: Vec<f64> = radial_rays
+                .par_iter()
+                .map(|ray| {
+                    let radial_intersection = mesh.intersect(ray, IntersectionSort::Nearest, epsilon);
+                    if let Some(radial_intersection) = radial_intersection {
+                        radial_intersection.distance
+                    } else {
+                        f64::INFINITY
+                    }
+                })
+                .collect();
+
+            let max_radial_distance = radial_intersections
+                .iter()
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap();
+
+            let min_radial_distance = radial_intersections
+                .iter()
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap();
+
+            if max_radial_distance.is_finite() {
+                if *min_radial_distance < radius {
+                    let penalty = (radius - *min_radial_distance) / radius;
+                    distance = distance.powf(1.0 + penalty);
+                }
+            } else {
+                distance = f64::INFINITY;
+                thickness = 0.0;
+            }
+        }
+    }
+    
+    (distance, thickness)
+}
+
 #[pyfunction]
 #[pyo3(signature = (mesh, origin, n_steps=128, n_iter=3, initial_fov=45.0, check_radially=false, radius=4.0, radial_samples=8, radial_rings=2, objective_distance_weight=0.5, thickness_threshold=10., depth_threshold=70.0, epsilon=1e-8))]
 pub fn find_target(

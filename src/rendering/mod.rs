@@ -2,6 +2,8 @@ mod camera;
 mod intersection;
 mod ray;
 mod renderer;
+#[cfg(target_feature = "avx")]
+pub mod simd;
 mod target;
 
 pub use camera::{Camera, CameraType};

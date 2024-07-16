@@ -85,7 +85,7 @@ def predict(
     from torch import device, load, no_grad
 
     from evdplanner.cli import set_verbosity
-    from evdplanner.network.training import LightningWrapper, OptimizableModel
+    from evdplanner.network.training import OptimizableModel
     from evdplanner.network.transforms import default_load_transforms
 
     set_verbosity(verbose)

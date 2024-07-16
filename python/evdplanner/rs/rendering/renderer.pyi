@@ -5,7 +5,7 @@ import numpy as np
 
 from evdplanner.rs import Camera, Intersection, IntersectionSort, Mesh
 
-class CPURenderer:
+class Renderer:
     """
     A class to render a mesh from a given camera.
 

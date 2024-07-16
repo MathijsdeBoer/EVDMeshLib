@@ -80,7 +80,7 @@ def model(
     from evdplanner.markups import DisplaySettings, MarkupManager
     from evdplanner.network.architecture.point_regressor import PointRegressor
     from evdplanner.network.transforms import default_load_transforms
-    from evdplanner.rendering import Camera, CameraType, CPURenderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
     from evdplanner.rendering.utils import normalize_image
 
     set_verbosity(verbose)
@@ -141,7 +141,7 @@ def model(
             y_resolution=resolution[1],
             camera_type=CameraType.Equirectangular,
         )
-        renderer = CPURenderer(
+        renderer = Renderer(
             camera=camera,
             mesh=mesh,
         )

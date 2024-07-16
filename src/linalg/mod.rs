@@ -1,4 +1,6 @@
 mod mat4;
+#[cfg(target_feature = "avx")]
+pub mod simd;
 mod vec3;
 
 pub use mat4::Mat4;
