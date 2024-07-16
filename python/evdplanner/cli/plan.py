@@ -2,6 +2,8 @@ from pathlib import Path
 
 import click
 
+from evdplanner.rendering.utils import spherical_project
+
 
 @click.command()
 @click.option(
@@ -144,28 +146,8 @@ def plan(
     logger.info("Loading skin mesh...")
     skin = Mesh.load(str(skin), num_samples=10_000_000)
 
-    logger.info("Creating camera...")
-    camera = Camera(
-        origin=skin.origin,
-        forward=Vec3(0.0, -1.0, 0.0),
-        up=Vec3(0.0, 0.0, 1.0),
-        x_resolution=skin_model.in_shape[0],
-        y_resolution=skin_model.in_shape[1],
-        camera_type=CameraType.Equirectangular,
-    )
-    logger.debug(f"Camera: {camera}")
-
-    logger.info("Rendering skin...")
-    renderer = Renderer(camera, skin)
-    skin_render = renderer.render(IntersectionSort.Farthest)
-    logger.debug(f"Skin render shape: {skin_render.shape}")
-
-    logger.info("Normalizing skin render...")
-    skin_depth = skin_render[..., 0]
-    skin_normal = skin_render[..., 1:]
-    logger.debug(f"Skin depth shape: {skin_depth.shape}")
-    logger.debug(f"Skin normal shape: {skin_normal.shape}")
-
+    logger.info("Projecting skin...")
+    skin_depth, skin_normal = spherical_project(skin, skin_model.in_shape)
     skin_depth = normalize_image(skin_depth)
 
     if write_intermediate:

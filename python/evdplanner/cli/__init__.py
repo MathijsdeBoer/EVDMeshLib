@@ -6,6 +6,7 @@ import sys
 
 import click
 from loguru import logger
+from trogon import tui
 
 from evdplanner.cli.augment import augment
 from evdplanner.cli.generate import generate
@@ -16,6 +17,7 @@ from evdplanner.cli.preprocessing import preprocess
 from evdplanner.cli.validate import validate
 
 
+@tui()
 @click.group()
 def cli() -> None:
     """
