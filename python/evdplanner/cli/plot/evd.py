@@ -32,9 +32,16 @@ def evd() -> None:
     default="EVD.mrk.json",
     help="The filename of the EVD markup.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Increase verbosity.",
+)
 def lengths(
     dataset: Path,
     evd_filename: str = "EVD.mrk.json",
+    verbose: int = 0,
 ) -> None:
     """
     Plot the lengths of the EVDs in the dataset.
@@ -50,11 +57,19 @@ def lengths(
     -------
     None
     """
+    import numpy as np
+    from loguru import logger
     from tqdm import tqdm
 
+    from evdplanner.cli import set_verbosity
     from evdplanner.linalg import Vec3
 
+    set_verbosity(verbose)
+
+    logger.debug(f"Processing dataset: {dataset}")
     patients = [x.resolve() for x in dataset.iterdir() if x.is_dir()]
+    logger.debug(f"Found {len(patients)} patients.")
+
     evd_lengths = []
     for patient in tqdm(patients, desc="Processing patients", total=len(patients)):
         if not (patient / evd_filename).exists():
@@ -69,7 +84,19 @@ def lengths(
 
         evd_lengths.append((left_kp - left_tp).length)
         evd_lengths.append((right_kp - right_tp).length)
+    
+    evd_lengths = np.array(evd_lengths)
 
+    logger.info(f"Found {len(evd_lengths)} EVDs.")
+    logger.info(f"Min: {evd_lengths.min()}")
+    logger.info(f"Max: {evd_lengths.max()}")
+    logger.info(f"Mean: {evd_lengths.mean()}")
+    logger.info(f"Std: {evd_lengths.std()}")
+
+    logger.info(f"Median: {np.median(evd_lengths)}")
+    logger.info(f"95CI: {np.percentile(evd_lengths, 2.5)} - {np.percentile(evd_lengths, 97.5)}")
+
+    logger.info("Plotting histogram.")
     p = sns.histplot(
         evd_lengths,
         stat="frequency",

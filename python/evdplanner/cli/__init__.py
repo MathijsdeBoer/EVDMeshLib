@@ -11,7 +11,7 @@ from trogon import tui
 from evdplanner.cli.augment import augment
 from evdplanner.cli.generate import generate
 from evdplanner.cli.model import model
-from evdplanner.cli.plan import plan
+from evdplanner.cli.plan import cli_plan
 from evdplanner.cli.plot import plot
 from evdplanner.cli.preprocessing import preprocess
 from evdplanner.cli.validate import validate
@@ -37,7 +37,7 @@ def cli() -> None:
 cli.add_command(augment)
 cli.add_command(generate)
 cli.add_command(model)
-cli.add_command(plan)
+cli.add_command(cli_plan)
 cli.add_command(plot)
 cli.add_command(preprocess)
 cli.add_command(validate)
