@@ -1,6 +1,7 @@
 """
 Intersection and IntersectionSort classes for use in the EVDPlanner class.
 """
+
 from evdplanner.rs import Vec3
 
 class IntersectionSort:

@@ -1,6 +1,7 @@
 """
 The entry point for the CLI.
 """
+
 from evdplanner.cli import cli
 
 

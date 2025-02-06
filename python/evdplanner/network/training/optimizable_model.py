@@ -1,6 +1,7 @@
 """
 The abstract class for the models that can be optimized using optuna.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any
 

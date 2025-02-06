@@ -80,7 +80,7 @@ def model(
     from evdplanner.markups import DisplaySettings, MarkupManager
     from evdplanner.network.architecture.point_regressor import PointRegressor
     from evdplanner.network.transforms import default_load_transforms
-    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort, Renderer
     from evdplanner.rendering.utils import normalize_image
 
     set_verbosity(verbose)

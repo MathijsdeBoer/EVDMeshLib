@@ -1,6 +1,7 @@
 """
 Plot keypoints on an image.
 """
+
 import json
 from pathlib import Path
 

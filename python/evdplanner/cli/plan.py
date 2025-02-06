@@ -6,13 +6,13 @@ from evdplanner.rendering.utils import spherical_project
 
 
 def plan(
-        skin: Path,
-        skin_model: Path,
-        output: Path,
-        ventricles: Path | None = None,
-        gpu_model: bool = False,
-        write_intermediate: bool = False,
-        return_subtimes: bool = False,
+    skin: Path,
+    skin_model: Path,
+    output: Path,
+    ventricles: Path | None = None,
+    gpu_model: bool = False,
+    write_intermediate: bool = False,
+    return_subtimes: bool = False,
 ) -> dict | None:
     """
     Plan EVD trajectory.
@@ -47,12 +47,7 @@ def plan(
     from evdplanner.markups import DisplaySettings, MarkupManager
     from evdplanner.network.architecture import PointRegressor
     from evdplanner.network.transforms import default_load_transforms
-    from evdplanner.rendering import (
-        Camera,
-        CameraType,
-        IntersectionSort,
-        find_target,
-    )
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort, find_target
     from evdplanner.rendering.utils import normalize_image
 
     start = time()
@@ -116,7 +111,9 @@ def plan(
     ]
     skin_input = transpose(skin_input, -1, -2)
     logger.debug(f"Skin input {skin_input.shape}")
-    time_dict["processing"]["Spherical Projection Transform"] = time() - skin_image_transform_start_time
+    time_dict["processing"]["Spherical Projection Transform"] = (
+        time() - skin_image_transform_start_time
+    )
 
     logger.info("Predicting skin landmarks...")
     landmark_prediction_start_time = time()

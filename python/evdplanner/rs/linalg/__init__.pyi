@@ -1,6 +1,7 @@
 """
 Linear algebra module.
 """
+
 from .mat4 import Mat4
 from .vec3 import Vec3
 

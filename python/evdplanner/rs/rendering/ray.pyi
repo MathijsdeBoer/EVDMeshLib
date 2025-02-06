@@ -1,6 +1,7 @@
 """
 The Ray class, which is used to represent a ray in 3D space.
 """
+
 from evdplanner.rs import Vec3
 
 class Ray:
@@ -28,6 +29,7 @@ class Ray:
         direction : Vec3
             The direction of the ray.
         """
+
     def at(self, t: float) -> Vec3:
         """
         Returns the point at a given distance along the ray.
@@ -42,6 +44,7 @@ class Ray:
         Vec3
             The point at the given distance along the ray.
         """
+
     def __repr__(self) -> str:
         """
         Returns a string representation of the ray.
@@ -51,6 +54,7 @@ class Ray:
         str
             A string representation of the ray.
         """
+
     def __str__(self) -> str:
         """
         Returns a string representation of the ray.

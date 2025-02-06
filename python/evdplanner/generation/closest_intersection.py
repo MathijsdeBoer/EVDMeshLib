@@ -2,7 +2,7 @@ import numpy as np
 
 from evdplanner.geometry import Mesh
 from evdplanner.linalg import Vec3
-from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
+from evdplanner.rendering import Camera, CameraType, IntersectionSort, Renderer
 
 
 def find_closest_intersection(

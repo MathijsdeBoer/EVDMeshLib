@@ -1,6 +1,7 @@
 """
 Mesh class for representing 3D triangle meshes.
 """
+
 import numpy as np
 
 from evdplanner.rs import Deformer, Intersection, IntersectionSort, Mat4, Ray, Vec3
@@ -61,6 +62,7 @@ class Mesh:
         triangles : list[tuple[int, int, int]]
             List of triangles, each represented by a tuple of three vertex indices.
         """
+
     @staticmethod
     def load(path: str, num_samples: int = 10_000) -> Mesh:
         """
@@ -78,6 +80,7 @@ class Mesh:
         Mesh
             The loaded mesh.
         """
+
     def save(self, path: str) -> None:
         """
         Save the mesh to a file.
@@ -91,6 +94,7 @@ class Mesh:
         -------
         None
         """
+
     def transform(self, transform: Mat4) -> None:
         """
         Transform the mesh.
@@ -104,6 +108,7 @@ class Mesh:
         -------
         None
         """
+
     def deform(self, deform: Deformer) -> None:
         """
         Deform the mesh.
@@ -117,6 +122,7 @@ class Mesh:
         -------
         None
         """
+
     def recalculate_normals(self) -> None:
         """
         Recalculate the normals of the triangles.
@@ -125,6 +131,7 @@ class Mesh:
         -------
         None
         """
+
     def recalculate_areas(self) -> None:
         """
         Recalculate the areas of the triangles.
@@ -133,6 +140,7 @@ class Mesh:
         -------
         None
         """
+
     def recalculate_origin(self, num_samples: int = 1_000_000) -> None:
         """
         Recalculate the origin of the mesh.
@@ -146,6 +154,7 @@ class Mesh:
         -------
         None
         """
+
     def recalculate(self, num_samples: int = 1_000_000) -> None:
         """
         Rebuild the BVH and recalculate the normals, areas, and origin of the mesh.
@@ -159,6 +168,7 @@ class Mesh:
         -------
         None
         """
+
     def update_triangles(self) -> None:
         """
         Update the triangles of the mesh.
@@ -167,6 +177,7 @@ class Mesh:
         -------
         None
         """
+
     def rebuild_bvh(self) -> None:
         """
         Rebuild the BVH.
@@ -175,6 +186,7 @@ class Mesh:
         -------
         None
         """
+
     def flatten_bvh(self) -> None:
         """
         Flatten the BVH.
@@ -183,6 +195,7 @@ class Mesh:
         -------
         None
         """
+
     def print_bvh(self) -> None:
         """
         Print the BVH.
@@ -191,6 +204,7 @@ class Mesh:
         -------
         None
         """
+
     def intersect(
         self, ray: Ray, sorting: IntersectionSort, epsilon: float = 1e-8
     ) -> Intersection | None:
@@ -211,6 +225,7 @@ class Mesh:
         Intersection | None
             The intersection, or None if no intersection was found.
         """
+
     def triangles_as_vertex_array(self) -> np.ndarray:
         """
         Get the triangles as a vertex array.
@@ -220,6 +235,7 @@ class Mesh:
         np.ndarray
             The vertex array.
         """
+
     def laplacian_smooth(self, iterations: int = 10, smoothing_factor: float = 0.5) -> None:
         """
         Smooth the mesh using the Laplacian smoothing algorithm.
@@ -235,6 +251,7 @@ class Mesh:
         -------
         None
         """
+
     @property
     def num_triangles(self) -> int:
         """
@@ -245,6 +262,7 @@ class Mesh:
         int
             Number of triangles.
         """
+
     @property
     def surface_area(self) -> float:
         """
@@ -255,6 +273,7 @@ class Mesh:
         float
             Surface area.
         """
+
     @property
     def volume(self) -> float:
         """

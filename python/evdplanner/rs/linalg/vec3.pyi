@@ -1,6 +1,7 @@
 """
 3D vectors.
 """
+
 from evdplanner.rs.linalg.mat4 import Mat4
 
 class Vec3:
@@ -34,6 +35,7 @@ class Vec3:
         z : float
             The z component
         """
+
     @staticmethod
     def zero() -> Vec3:
         """
@@ -44,6 +46,7 @@ class Vec3:
         Vec3
             A new Vec3 instance with all components set to zero
         """
+
     @staticmethod
     def one() -> Vec3:
         """
@@ -54,6 +57,7 @@ class Vec3:
         Vec3
             A new Vec3 instance with all components set to one
         """
+
     @staticmethod
     def cartesian_to_spherical(v: Vec3, wrap_around: bool = False) -> Vec3:
         """
@@ -71,6 +75,7 @@ class Vec3:
         Vec3
             A Vec3 instance representing spherical coordinates
         """
+
     @staticmethod
     def spherical_to_cartesian(vec: Vec3) -> Vec3:
         """
@@ -86,6 +91,7 @@ class Vec3:
         Vec3
             A Vec3 instance representing cartesian coordinates
         """
+
     @staticmethod
     def spherical_to_image(v: Vec3, width: int = 1, height: int = 1) -> tuple[float, float]:
         """
@@ -105,6 +111,7 @@ class Vec3:
         tuple[float, float]
             A tuple of floats representing image coordinates
         """
+
     @staticmethod
     def image_to_spherical(x: float, y: float, width: int = 1, height: int = 1) -> Vec3:
         """
@@ -126,6 +133,7 @@ class Vec3:
         Vec3
             A Vec3 instance representing spherical coordinates
         """
+
     @staticmethod
     def cartesian_to_cylindrical(vec: Vec3) -> Vec3:
         """
@@ -141,6 +149,7 @@ class Vec3:
         Vec3
             A Vec3 instance representing cylindrical coordinates
         """
+
     @staticmethod
     def cylindrical_to_cartesian(vec: Vec3) -> Vec3:
         """
@@ -156,6 +165,7 @@ class Vec3:
         Vec3
             A Vec3 instance representing cartesian coordinates
         """
+
     @property
     def squared_length(self) -> float:
         """
@@ -166,6 +176,7 @@ class Vec3:
         float
             The squared length of the vector
         """
+
     @property
     def length(self) -> float:
         """
@@ -176,6 +187,7 @@ class Vec3:
         float
             The length of the vector
         """
+
     @property
     def unit_vector(self) -> Vec3:
         """
@@ -186,6 +198,7 @@ class Vec3:
         Vec3
             A unit vector in the same direction as the original vector
         """
+
     @property
     def phi(self) -> float:
         """
@@ -196,6 +209,7 @@ class Vec3:
         float
             The azimuthal angle
         """
+
     @property
     def theta(self) -> float:
         """
@@ -206,6 +220,7 @@ class Vec3:
         float
             The polar angle
         """
+
     @property
     def rho(self) -> float:
         """
@@ -216,6 +231,7 @@ class Vec3:
         float
             The radial distance
         """
+
     def dot(self, other: Vec3) -> float:
         """
         Returns the dot product of this vector and another vector.
@@ -230,6 +246,7 @@ class Vec3:
         float
             The dot product
         """
+
     def cross(self, other: Vec3) -> Vec3:
         """
         Returns the cross product of this vector and another vector.
@@ -244,6 +261,7 @@ class Vec3:
         Vec3
             The cross product
         """
+
     def rotate_around(self, axis: Vec3, theta: float) -> Vec3:
         """
         Rotates the vector around a given axis by a given angle.
@@ -260,6 +278,7 @@ class Vec3:
         Vec3
             The rotated vector
         """
+
     def as_float_list(self) -> list[float]:
         """
         Returns the vector's components as a list of floats.
@@ -269,6 +288,7 @@ class Vec3:
         list[float]
             The vector's components as a list of floats
         """
+
     def __add__(self, other: Vec3) -> Vec3: ...
     def __iadd__(self, other: Vec3) -> None: ...
     def __sub__(self, other: Vec3) -> Vec3: ...

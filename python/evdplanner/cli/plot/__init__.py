@@ -1,6 +1,7 @@
 """
 Plotting commands for the CLI.
 """
+
 import click
 
 from .errors import errors

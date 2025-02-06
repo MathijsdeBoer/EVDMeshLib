@@ -1,6 +1,7 @@
 """
 Project a mesh to a map.
 """
+
 from pathlib import Path
 
 import click
@@ -123,7 +124,7 @@ def equirectangular(
 
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager, MarkupTypes
-    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort, Renderer
     from evdplanner.rendering.utils import normalize_image
 
     logger.debug(f"Number of triangles: {ctx.obj['mesh'].num_triangles}")
@@ -278,7 +279,7 @@ def perspective(
 
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager
-    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort, Renderer
     from evdplanner.rendering.utils import normalize_image
 
     logger.info(f"Loading Kocher projection from {kocher}")

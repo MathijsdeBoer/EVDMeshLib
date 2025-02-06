@@ -346,12 +346,14 @@ def train(
         train_samples=train_samples,
         val_samples=val_samples,
         test_samples=test_samples,
-        load_transforms=default_load_transforms(maps, label_names)
-        if use_maps
-        else default_mesh_load_transforms(
-            x_resolution=x_resolution,
-            y_resolution=y_resolution,
-            include_augmentations=use_augmentations,
+        load_transforms=(
+            default_load_transforms(maps, label_names)
+            if use_maps
+            else default_mesh_load_transforms(
+                x_resolution=x_resolution,
+                y_resolution=y_resolution,
+                include_augmentations=use_augmentations,
+            )
         ),
         augment_transforms=default_augment_transforms() if use_augmentations else None,
         batch_size=config.get("batch_size", 1),

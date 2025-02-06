@@ -1,6 +1,7 @@
 """
 Utility functions for the network.
 """
+
 import json
 from collections.abc import Callable, Iterable
 from pathlib import Path

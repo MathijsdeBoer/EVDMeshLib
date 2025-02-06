@@ -1,6 +1,7 @@
 """
 Rendering module.
 """
+
 from .camera import Camera, CameraType
 from .intersection import Intersection, IntersectionSort
 from .ray import Ray

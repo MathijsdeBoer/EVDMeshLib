@@ -1,6 +1,7 @@
 """
 Data module for the EVDPlanner network.
 """
+
 import json
 from pathlib import Path
 

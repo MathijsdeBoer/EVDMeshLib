@@ -1,6 +1,7 @@
 """
 Callback to log the loss and a sample image with the predicted keypoints.
 """
+
 from pathlib import Path
 
 import lightning.pytorch as pl

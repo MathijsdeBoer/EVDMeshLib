@@ -1,6 +1,7 @@
 """
 Mirror Transform.
 """
+
 import random
 from collections.abc import Sequence
 

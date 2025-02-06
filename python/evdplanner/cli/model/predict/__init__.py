@@ -1,6 +1,7 @@
 """
 Prediction CLI commands for the CLI.
 """
+
 from pathlib import Path
 
 import click

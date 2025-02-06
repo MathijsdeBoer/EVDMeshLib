@@ -1,6 +1,7 @@
 """
 Utility functions for rendering and normalizing images.
 """
+
 import numpy as np
 from loguru import logger
 
@@ -54,8 +55,8 @@ def spherical_project(
     renderer = Renderer(camera, mesh)
     skin_render = renderer.render(IntersectionSort.Farthest)
     logger.debug(f"Rendered image shape: {skin_render.shape}")
-    
+
     skin_depth = skin_render[..., 0]
     skin_normal = skin_render[..., 1:]
-    
+
     return skin_depth, skin_normal

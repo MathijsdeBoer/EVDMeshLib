@@ -95,6 +95,7 @@ class Camera:
         size : float, optional
             The size of the camera. Only used for orthographic cameras.
         """
+
     def cast_ray(self, x: float, y: float) -> Ray:
         """
         Cast a ray from the camera through the specified pixel.
@@ -111,6 +112,7 @@ class Camera:
         Ray
             The ray that was cast from the camera through the specified pixel.
         """
+
     def project_back(self, point: Vec3, normalized: bool = True) -> tuple[float, float]:
         """
         Project a 3D point back onto the camera's image plane.
@@ -127,6 +129,7 @@ class Camera:
         tuple[float, float]
             The x and y coordinates of the projected point on the camera's image plane.
         """
+
     def translate(self, vec: Vec3) -> None:
         """
         Translate the camera by the specified vector.
@@ -136,6 +139,7 @@ class Camera:
         vec : Vec3
             The vector by which to translate the camera.
         """
+
     def rotate(self, axis: Vec3, angle: float) -> None:
         """
         Rotate the camera around the specified axis by the specified angle.

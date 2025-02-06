@@ -1,6 +1,7 @@
 """
 The implementation of the angular error metrics.
 """
+
 from math import pi
 
 import torch

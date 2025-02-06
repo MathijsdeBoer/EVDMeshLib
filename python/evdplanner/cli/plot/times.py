@@ -154,27 +154,31 @@ def times(
                 ventricle_mesh,
                 gpu_model=use_gpu,
                 write_intermediate=False,
-                return_subtimes=True
+                return_subtimes=True,
             )
             evd_times.append(time_dict)
             logger.info(f"Time: {time_dict['total']:.2f}s")
 
-            df.append({
-                "patient": patient.name,
-                "main stage": "common",
-                "substage": "total",
-                "time": time_dict["total"],
-            })
+            df.append(
+                {
+                    "patient": patient.name,
+                    "main stage": "common",
+                    "substage": "total",
+                    "time": time_dict["total"],
+                }
+            )
             for key, value in time_dict.items():
                 if key == "total":
                     continue
                 for subkey, subvalue in value.items():
-                    df.append({
-                        "patient": f"{patient.name} run {run}",
-                        "main stage": key,
-                        "substage": subkey,
-                        "time": subvalue,
-                    })
+                    df.append(
+                        {
+                            "patient": f"{patient.name} run {run}",
+                            "main stage": key,
+                            "substage": subkey,
+                            "time": subvalue,
+                        }
+                    )
 
             # Clean up the temporary directory
             rmtree(output_tmp)

@@ -1,6 +1,7 @@
 """
 A MONAI transform for loading keypoints from a JSON file.
 """
+
 import json
 from collections.abc import Hashable, Mapping
 from pathlib import Path

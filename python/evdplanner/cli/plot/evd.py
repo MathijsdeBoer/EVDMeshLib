@@ -67,8 +67,8 @@ def lengths(
     -------
     None
     """
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
     import seaborn as sns
     from loguru import logger
     from tqdm import tqdm
@@ -97,7 +97,7 @@ def lengths(
 
         evd_lengths.append((left_kp - left_tp).length)
         evd_lengths.append((right_kp - right_tp).length)
-    
+
     evd_lengths = np.array(evd_lengths)
 
     logger.info(f"Found {len(evd_lengths)} EVDs.")

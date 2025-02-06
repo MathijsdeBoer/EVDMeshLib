@@ -1,6 +1,7 @@
 """
 The CPURenderer class, which is used to render a mesh from a given camera.
 """
+
 import numpy as np
 
 from evdplanner.rs import Camera, Intersection, IntersectionSort, Mesh
@@ -30,6 +31,7 @@ class Renderer:
         mesh : Mesh
             The mesh to render.
         """
+
     def render(self, intersection_mode: IntersectionSort, epsilon: float = 1e-8) -> np.ndarray:
         """
         Renders the mesh from the camera.
@@ -46,6 +48,7 @@ class Renderer:
         np.ndarray
             The rendered image.
         """
+
     def generate_intersections(
         self, intersection_mode: IntersectionSort, epsilon: float = 1e-8
     ) -> list[tuple[tuple[int, int], Intersection]]: ...

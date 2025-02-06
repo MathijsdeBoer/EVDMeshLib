@@ -1,6 +1,7 @@
 """
 The LightningWrapper class, which is a wrapper around a PyTorch model.
 """
+
 from collections.abc import Callable
 from typing import Any
 

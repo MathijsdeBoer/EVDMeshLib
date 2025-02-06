@@ -1,6 +1,7 @@
 """
 Point regressor model.
 """
+
 from collections.abc import Callable, Sequence
 from math import ceil, log2, prod
 from typing import Any

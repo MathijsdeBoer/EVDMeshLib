@@ -80,7 +80,7 @@ def errors(
     from evdplanner.geometry import Mesh
     from evdplanner.linalg import Vec3
     from evdplanner.markups import MarkupManager
-    from evdplanner.rendering import Camera, CameraType, Renderer, IntersectionSort
+    from evdplanner.rendering import Camera, CameraType, IntersectionSort, Renderer
     from evdplanner.rendering.utils import normalize_image
 
     subdirs = [x for x in input_path.iterdir() if x.is_dir()]
@@ -144,9 +144,15 @@ def errors(
     ct_errors = error_df.loc[error_df["modality"] == "CT", "value"]
 
     print("Errors:")
-    print(f"Mean error: {error_df.loc[error_df['axis'] == 'all', 'value'].mean()} {error_df.loc[error_df['axis'] == 'all', 'value'].std()}")
-    print(f"Mean MRI error: {error_df.loc[(error_df['modality'] == 'MRI') & (error_df['axis'] == 'all'), 'value'].mean()} {error_df.loc[(error_df['modality'] == 'MRI') & (error_df['axis'] == 'all'), 'value'].std()}")
-    print(f"Mean CT error: {error_df.loc[(error_df['modality'] == 'CT') & (error_df['axis'] == 'all'), 'value'].mean()} {error_df.loc[(error_df['modality'] == 'CT') & (error_df['axis'] == 'all'), 'value'].std()}")
+    print(
+        f"Mean error: {error_df.loc[error_df['axis'] == 'all', 'value'].mean()} {error_df.loc[error_df['axis'] == 'all', 'value'].std()}"
+    )
+    print(
+        f"Mean MRI error: {error_df.loc[(error_df['modality'] == 'MRI') & (error_df['axis'] == 'all'), 'value'].mean()} {error_df.loc[(error_df['modality'] == 'MRI') & (error_df['axis'] == 'all'), 'value'].std()}"
+    )
+    print(
+        f"Mean CT error: {error_df.loc[(error_df['modality'] == 'CT') & (error_df['axis'] == 'all'), 'value'].mean()} {error_df.loc[(error_df['modality'] == 'CT') & (error_df['axis'] == 'all'), 'value'].std()}"
+    )
 
     # Normality tests
     print("Normality tests:")
@@ -241,7 +247,9 @@ def errors(
             s=100,
         )
 
-        print(f"Means for label {label.get_text()}: MRI: {mean_mr} ({std_mr}), CT: {mean_ct} ({std_ct})")
+        print(
+            f"Means for label {label.get_text()}: MRI: {mean_mr} ({std_mr}), CT: {mean_ct} ({std_ct})"
+        )
         print(f"{p_value}\n")
 
         if significance[error_df["label"].unique()[i]] < significance_level:

@@ -31,6 +31,7 @@ class Deformer:
         seed : int
             The seed of the deformation.
         """
+
     def deform_vertex(self, vertex: Vec3) -> Vec3:
         """
         Deform the given vertex.

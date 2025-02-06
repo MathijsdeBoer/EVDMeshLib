@@ -1,16 +1,10 @@
 """
 Rust core bindings.
 """
+
 from .geometry import Deformer, Mesh
 from .linalg import Mat4, Vec3
-from .rendering import (
-    Camera,
-    CameraType,
-    Renderer,
-    Intersection,
-    IntersectionSort,
-    Ray,
-)
+from .rendering import Camera, CameraType, Intersection, IntersectionSort, Ray, Renderer
 
 __all__ = [
     "Camera",
