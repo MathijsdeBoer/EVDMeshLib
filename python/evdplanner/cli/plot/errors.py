@@ -143,6 +143,11 @@ def errors(
     mri_errors = error_df.loc[error_df["modality"] == "MRI", "value"]
     ct_errors = error_df.loc[error_df["modality"] == "CT", "value"]
 
+    print("Errors:")
+    print(f"Mean error: {error_df.loc[error_df['axis'] == 'all', 'value'].mean()} {error_df.loc[error_df['axis'] == 'all', 'value'].std()}")
+    print(f"Mean MRI error: {error_df.loc[(error_df['modality'] == 'MRI') & (error_df['axis'] == 'all'), 'value'].mean()} {error_df.loc[(error_df['modality'] == 'MRI') & (error_df['axis'] == 'all'), 'value'].std()}")
+    print(f"Mean CT error: {error_df.loc[(error_df['modality'] == 'CT') & (error_df['axis'] == 'all'), 'value'].mean()} {error_df.loc[(error_df['modality'] == 'CT') & (error_df['axis'] == 'all'), 'value'].std()}")
+
     # Normality tests
     print("Normality tests:")
     print("MRI errors:")
@@ -224,7 +229,9 @@ def errors(
             "value",
         ]
         mean_mr = mr_vals.mean()
+        std_mr = mr_vals.std()
         mean_ct = ct_vals.mean()
+        std_ct = ct_vals.std()
 
         plt.scatter(
             x=[i - 0.2, i + 0.2],
@@ -234,9 +241,9 @@ def errors(
             s=100,
         )
 
-        print(f"{p_value}")
+        print(f"Means for label {label.get_text()}: MRI: {mean_mr} ({std_mr}), CT: {mean_ct} ({std_ct})")
+        print(f"{p_value}\n")
 
-        print(f"Means for label {label.get_text()}: MRI: {mean_mr}, CT: {mean_ct}")
         if significance[error_df["label"].unique()[i]] < significance_level:
             p.text(
                 i,

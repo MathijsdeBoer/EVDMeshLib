@@ -46,7 +46,7 @@ class OptimizableModel(ABC, nn.Module):
     @classmethod
     @abstractmethod
     def from_optuna_parameters(
-        cls: type["OptimizableModel"], parameters: dict[str, any], **kwargs
+        cls: type["OptimizableModel"], parameters: dict[str, Any], **kwargs
     ) -> "OptimizableModel":
         """
         Create a model from the parameters.

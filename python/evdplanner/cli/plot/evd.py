@@ -1,10 +1,6 @@
 from pathlib import Path
 
 import click
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from evdplanner.markups import MarkupManager
 
 
 @click.group
@@ -33,6 +29,19 @@ def evd() -> None:
     help="The filename of the EVD markup.",
 )
 @click.option(
+    "-o",
+    "--output",
+    type=click.Path(
+        file_okay=True,
+        dir_okay=False,
+        writable=True,
+        resolve_path=True,
+        path_type=Path,
+    ),
+    required=False,
+    help="Path to save the plot image.",
+)
+@click.option(
     "-v",
     "--verbose",
     count=True,
@@ -41,6 +50,7 @@ def evd() -> None:
 def lengths(
     dataset: Path,
     evd_filename: str = "EVD.mrk.json",
+    output: Path | None = None,
     verbose: int = 0,
 ) -> None:
     """
@@ -58,11 +68,14 @@ def lengths(
     None
     """
     import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     from loguru import logger
     from tqdm import tqdm
 
     from evdplanner.cli import set_verbosity
     from evdplanner.linalg import Vec3
+    from evdplanner.markups import MarkupManager
 
     set_verbosity(verbose)
 
@@ -97,15 +110,40 @@ def lengths(
     logger.info(f"95CI: {np.percentile(evd_lengths, 2.5)} - {np.percentile(evd_lengths, 97.5)}")
 
     logger.info("Plotting histogram.")
+    sns.set_theme(
+        context="paper",
+        style="whitegrid",
+        palette="colorblind",
+        rc={
+            "figure.figsize": (8, 4),
+            "figure.dpi": 600,
+        },
+    )
     p = sns.histplot(
         evd_lengths,
-        stat="frequency",
+        stat="count",
         kde=True,
         binwidth=5,
     )
+
+    p.axvline(80.0, color="red", linestyle=":", label="80mm threshold", alpha=0.5)
+
+    p.axvline(np.median(evd_lengths), color="black", linestyle="--", label="Median", alpha=0.5)
+    p.axvline(np.percentile(evd_lengths, 2.5), color="black", linestyle="--", alpha=0.5)
+    p.axvline(np.percentile(evd_lengths, 97.5), color="black", linestyle="--", alpha=0.5)
+
+    p.axvline(np.mean(evd_lengths), color="blue", linestyle="-.", label="Mean", alpha=0.5)
+    p.axvline(np.mean(evd_lengths) + np.std(evd_lengths), color="blue", linestyle="-.", alpha=0.5)
+    p.axvline(np.mean(evd_lengths) - np.std(evd_lengths), color="blue", linestyle="-.", alpha=0.5)
+
+    p.legend()
 
     p.set_title("EVD Lengths")
     p.set_xlabel("Length (mm)")
     p.set_ylabel("Count")
 
-    plt.show()
+    if output is not None:
+        logger.info(f"Saving plot to {output}.")
+        plt.savefig(output)
+    else:
+        plt.show()
