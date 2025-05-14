@@ -4,12 +4,15 @@ This code is associated with the paper published in Neurosurgical Focus.
 If you use this code, please cite the paper.
 
 ```bibtex
-@article{XXX,
-  title={XXX},
-  author={XXX},
-  journal={XXX},
-  year={XXX},
-  publisher={XXX}
+@article{de_Boer_Fully_Automatic_Anatomical_2025,
+author = {de Boer, Mathijs and van Doormaal, Jesse A.M. and Köllen, Mare H. and Bartels, Lambertus W. and Robe, Pierre A.J.T. and van Doormaal, Tristan P.C.},
+doi = {10.3171/2025.X.FOCUSXXXXX},
+journal = {Neurosurgical Focus},
+month = jul,
+number = {7},
+title = {{"Fully Automatic Anatomical Landmark Localization and Trajectory Planning for Navigated External Ventricular Drain Placement"}},
+volume = {58},
+year = {2025}
 }
 ```
 
