@@ -1,149 +1,65 @@
-# This CITATION.cff file was generated with cffinit.
-# Visit https://bit.ly/cffinit to generate yours today!
-
 cff-version: 1.2.0
-title: EVD Planner
-message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
-type: software
+title: "EVD Planner"
+message: "If you use this software, please cite it using the metadata from this file."
 authors:
-  - given-names: Mathijs
-    family-names: Boer
-    email: m.deboer-41@umcutrecht.nl
-    affiliation: >-
-      Image Sciences Institute, University Medical Centre
-      Utrecht
-    orcid: 'https://orcid.org/0009-0004-6415-7194'
-    name-particle: de
-  - given-names: Jesse A.M.
-    name-particle: van
-    family-names: Doormaal
-    name-suffix: MD
-    affiliation: >-
-      Department of Neurosurgery, University Medical Centre
-      Utrecht
-    orcid: 'https://orcid.org/0000-0002-9531-2765'
-  - given-names: Mare H.
-    family-names: Köllen
-    affiliation: >-
-      Department of Neurosurgery, University Medical Centre
-      Utrecht
-  - given-names: Lambertus W.
-    family-names: Bartels
-    affiliation: >-
-      Image Sciences Institute, University Medical Centre
-      Utrecht
-  - given-names: Pierre A.J.T.
-    family-names: Robe
-    affiliation: >-
-      Department of Neurosurgery, University Medical Centre
-      Utrecht
-  - given-names: Tristan P.C.
-    name-particle: van
-    family-names: Doormaal
-    affiliation: >-
-      Department of Neurosurgery, University Medical Centre
-      Utrecht
-repository-code: 'https://github.com/MathijsdeBoer/EVDMeshLib'
-abstract: >
-  Objective: To develop and validate a fully automatic
-  anatomical landmark localization and trajectory planning
-  method for external ventricular drain (EVD) placement
-  using Computed Tomography (CT) or Magnetic Resonance
-  Imaging (MRI) images.
-
-
-  Methods: We used 125 pre-operative CT and 137
-  contrast-enhanced T1-weighted MRI scans to generate 3D
-  surface meshes of patients’ skin and ventricular systems.
-  Seven anatomical landmarks were manually annotated to
-  train a neural network for automatic landmark
-  localization. The model's accuracy was assessed by
-  calculating the mean Euclidian distance of predicted
-  landmarks to the ground truth. Kocher’s Point and EVD
-  trajectories were automatically calculated with the
-  Foramen of Monro as the target. Performance was evaluated
-  using Kakarla grades, as assessed by three clinicians.
-  Interobserver agreement was measured with Pearson
-  correlation, and scores were aggregated using majority
-  voting. Ordinal linear regressions were used to assess
-  whether modality or placement side had an effect on
-  Kakarla grades. The impact of landmark localization error
-  on final EVD plan was also evaluated.
-
-
-  Results: The automated landmark localization model
-  achieved a mean error of 4.0mm (std: 2.6mm). Trajectory
-  planning generated a trajectory for all patients, with a
-  Kakarla grade of 1 in 92.9% of cases. Statistical analyses
-  indicate a strong inter-observer agreement and no
-  significant differences between modalities (CT vs MRI) or
-  EVD placement sides. The location of Kocher’s Point and
-  the Target Point were significantly correlated to nasion
-  landmark localization error, with a median drift of 9.38mm
-  (95CI: [1.94, 19.16]) and 3.91mm (95CI: [0.18, 26.76]) for
-  Kocher’s Point and the Target Point, respectively 
-
-
-  Conclusions: The presented method proved efficient and
-  robust for landmark localization and accurate EVD
-  trajectory planning. The short processing time thereby
-  also provides a base for use in emergency settings.
-keywords:
-  - Automatic Planning
-  - Artificial Intelligence
-  - Deep Learning
-  - Extraventricular Drain
-  - Keyhole Procedure
-  - Neuronavigation
+- given-names: "Mathijs"
+  family-names: "Boer"
+  email: "m.deboer-41@umcutrecht.nl"
+  affiliation: "Image Sciences Institute, University Medical Centre Utrecht"
+  orcid: "https://orcid.org/0009-0004-6415-7194"
+  name-particle: "de"
+- given-names: "Jesse A.M."
+  name-particle: "van"
+  family-names: "Doormaal"
+  affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+  orcid: "https://orcid.org/0000-0002-9531-2765"
+- given-names: "Mare H."
+  family-names: "Köllen"
+  affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+- given-names: "Lambertus W."
+  family-names: "Bartels"
+  affiliation: "Image Sciences Institute, University Medical Centre Utrecht"
+- given-names: "Pierre A.J.T."
+  family-names: "Robe"
+  affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+- given-names: "Tristan P.C."
+  name-particle: "van"
+  family-names: "Doormaal"
+  affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+url: "https://github.com/MathijsdeBoer/EVDMeshLib"
 license: MIT
 preferred-citation:
   type: article
   authors:
-    authors:
-      - given-names: Mathijs
-        family-names: Boer
-        email: m.deboer-41@umcutrecht.nl
-        affiliation: >-
-          Image Sciences Institute, University Medical Centre
-          Utrecht
-        orcid: 'https://orcid.org/0009-0004-6415-7194'
-        name-particle: de
-      - given-names: Jesse A.M.
-        name-particle: van
-        family-names: Doormaal
-        name-suffix: MD
-        affiliation: >-
-          Department of Neurosurgery, University Medical Centre
-          Utrecht
-        orcid: 'https://orcid.org/0000-0002-9531-2765'
-      - given-names: Mare H.
-        family-names: Köllen
-        affiliation: >-
-          Department of Neurosurgery, University Medical Centre
-          Utrecht
-      - given-names: Lambertus W.
-        family-names: Bartels
-        affiliation: >-
-          Image Sciences Institute, University Medical Centre
-          Utrecht
-      - given-names: Pierre A.J.T.
-        family-names: Robe
-        affiliation: >-
-          Department of Neurosurgery, University Medical Centre
-          Utrecht
-      - given-names: Tristan P.C.
-        name-particle: van
-        family-names: Doormaal
-        affiliation: >-
-          Department of Neurosurgery, University Medical Centre
-          Utrecht
+  - given-names: "Mathijs"
+    family-names: "Boer"
+    email: "m.deboer-41@umcutrecht.nl"
+    affiliation: "Image Sciences Institute, University Medical Centre Utrecht"
+    orcid: "https://orcid.org/0009-0004-6415-7194"
+    name-particle: "de"
+  - given-names: "Jesse A.M."
+    name-particle: "van"
+    family-names: "Doormaal"
+    affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+    orcid: "https://orcid.org/0000-0002-9531-2765"
+  - given-names: "Mare H."
+    family-names: "Köllen"
+    affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+  - given-names: "Lambertus W."
+    family-names: "Bartels"
+    affiliation: "Image Sciences Institute, University Medical Centre Utrecht"
+  - given-names: "Pierre A.J.T."
+    family-names: "Robe"
+    affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
+  - given-names: "Tristan P.C."
+    name-particle: "van"
+    family-names: "Doormaal"
+    affiliation: "Department of Neurosurgery, University Medical Centre Utrecht"
   title: >-
-      Fully Automatic Anatomical Landmark Localization and
+      "Fully Automatic Anatomical Landmark Localization and
       Trajectory Planning for Navigated External Ventricular
-      Drain Placement
-  doi: '10.3171/2025.X.FOCUSXXXXX'
+      Drain Placement"
+  doi: "10.3171/2025.X.FOCUSXXXXX"
   journal: "Neurosurgical Focus"
   month: 7
   issue: 7
