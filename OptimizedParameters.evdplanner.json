@@ -1,0 +1,25 @@
+{
+    "optimizer": "adam",
+    "optimizer_args": {
+        "lr": 0.0001,
+        "weight_decay": 0.0,
+        "betas": [0.8, 0.85],
+        "eps": 6e-08
+    },
+    "scheduler": "cosine",
+    "scheduler_args": {
+        "t_max_ratio": 1.0,
+        "eta_min": 1e-7
+    },
+    "filters": 16,
+    "max_filters": 512,
+    "num_blocks": 6,
+    "num_residual_units": 2,
+    "act_fn": "PRELU",
+    "norm_fn": "INSTANCE",
+    "dropout": 0.0,
+    "final_act_fn": "SIGMOID",
+    "loss_fn": "maae",
+    "batch_size": 16,
+    "resolution": 2048
+}

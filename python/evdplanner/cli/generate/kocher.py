@@ -56,6 +56,26 @@ def kocher(
 ) -> None:
     """
     Measure Kocher points on a mesh using landmarks.
+
+    MESH is the input mesh file.
+    LANDMARKS is the input landmarks file.
+    OUTPUT is the output markups file
+    \f
+
+    Parameters
+    ----------
+    mesh : Path
+        The input mesh file.
+    landmarks : Path
+        The input landmarks file.
+    output : Path
+        The output markups file.
+    n_angles : int, optional
+        The number of angles to use for the measurement, by default 1000.
+    debug : bool, optional
+        Enable debug mode, by default False.
+    verbosity : int, optional
+        Increase output verbosity, by default 0.
     """
     from loguru import logger
 

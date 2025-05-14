@@ -151,7 +151,10 @@ def mesh(
     seed: int | None = None,
 ) -> None:
     """
-    Augment data.
+    Augment mesh data.
+
+    INPUT_MESH: Path to the input mesh file.
+    OUTPUT: Path to write the output mesh file.
     """
     import json
     import random
