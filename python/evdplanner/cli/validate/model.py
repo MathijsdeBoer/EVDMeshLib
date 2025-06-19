@@ -2,7 +2,6 @@ from pathlib import Path
 
 import click
 
-from evdplanner.network.transforms.keypoint_flip import flip_keypoints
 
 
 @click.command()

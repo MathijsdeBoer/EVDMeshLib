@@ -235,7 +235,7 @@ def target(
             visible_points=True,
         )
 
-        markups.save(output.parent / f"EVD.mrk.json")
+        markups.save(output.parent / "EVD.mrk.json")
 
     if verbosity > 0:
         left_distance = (left_tp - left_kp).length

@@ -186,7 +186,7 @@ def times(
     logger.info(f"Creating CSV file with timings. {len(df)} entries.")
     df = pd.DataFrame(df)
 
-    logger.info(f"Saving CSV file with timings.")
+    logger.info("Saving CSV file with timings.")
     df.to_csv(output, index=False)
 
     total_times = np.array([x["total"] for x in evd_times])

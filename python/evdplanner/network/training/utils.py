@@ -23,7 +23,7 @@ from evdplanner.network.training.lr_schedulers import PolyLRScheduler
 
 
 def get_loss_fn(
-    loss: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
+    loss: nn.Module | Callable[[Tensor, Tensor], Tensor] | str,
 ) -> nn.Module | Callable[[Tensor, Tensor], Tensor]:
     """
     Get the loss function.
@@ -56,7 +56,7 @@ def get_loss_fn(
 
 
 def get_metric_fn(
-    metric: nn.Module | Callable[[Tensor, Tensor], Tensor] | str
+    metric: nn.Module | Callable[[Tensor, Tensor], Tensor] | str,
 ) -> nn.Module | Callable[[Tensor, Tensor], Tensor]:
     """
     Get the metric function.
