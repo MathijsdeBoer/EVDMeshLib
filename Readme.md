@@ -1,6 +1,6 @@
 # ExtraVentricular Drain (EVD) Planning Tool
 
-This code is associated with the paper published in Neurosurgical Focus.
+This code is associated with [the paper published in Neurosurgical Focus.](https://doi.org/10.3171/2025.4.FOCUS25163)
 If you use this code, please cite the paper.
 
 ```bibtex
